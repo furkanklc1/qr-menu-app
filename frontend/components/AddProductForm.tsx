@@ -1,58 +1,43 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+
+interface Category {
+  id: number;
+  name: string;
+}
 
 export default function AddProductForm() {
   const router = useRouter();
+  const [categories, setCategories] = useState<Category[]>([]);
+  
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     price: "",
-    categoryId: 1,
+    categoryId: 0,
   });
+  
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
-  
-  // --- YENİ EKLENEN STATE: AI Yükleniyor mu? ---
-  const [aiLoading, setAiLoading] = useState(false); 
 
-  // --- YENİ EKLENEN FONKSİYON: AI İLE AÇIKLAMA YAZDIRMA ---
-  const handleGenerateAI = async () => {
-    // 1. Ürün adı boşsa uyar
-    if (!formData.name) {
-      alert("Lütfen önce ürün adını yazın!");
-      return;
-    }
-
-    setAiLoading(true); // Yükleniyor modunu aç
-
-    try {
-      // 2. Backend'deki AI servisine istek at
-      const res = await fetch("http://localhost:3000/ai/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: formData.name }),
+  useEffect(() => {
+    fetch("http://localhost:3000/categories")
+      .then((res) => res.json())
+      .then((data) => {
+        setCategories(data);
       });
-
-      const data = await res.json();
-
-      // 3. Gelen cevabı açıklama kutusuna yaz
-      if (data.description) {
-        setFormData((prev) => ({ ...prev, description: data.description }));
-      } else {
-        alert("AI bir açıklama üretemedi.");
-      }
-    } catch (error) {
-      console.error("AI Hatası:", error);
-      alert("AI servisine ulaşılamadı.");
-    } finally {
-      setAiLoading(false); // Yükleniyor modunu kapat
-    }
-  };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (formData.categoryId === 0) {
+      alert("Lütfen bir kategori seçiniz!");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -72,85 +57,105 @@ export default function AddProductForm() {
 
       if (response.ok) {
         alert("✅ Ürün Başarıyla Eklendi!");
-        setFormData({ name: "", description: "", price: "", categoryId: 1 });
+        setFormData({ name: "", description: "", price: "", categoryId: 0 });
         setFile(null);
         router.refresh();
       } else {
         alert("❌ Hata oluştu.");
       }
     } catch (error) {
-      console.error(error);
-      alert("❌ Sunucu hatası.");
+      alert("Sunucu hatası.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 h-fit sticky top-8">
-      <h2 className="text-xl font-bold text-orange-500 mb-4">Yeni Ürün Ekle</h2>
+    <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 h-fit sticky top-8 shadow-xl">
+      <h2 className="text-xl font-bold text-orange-500 mb-6 flex items-center gap-2">
+        <span>✨</span> Yeni Ürün Ekle
+      </h2>
       
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-5">
+        
+        {/* Ürün Adı */}
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Ürün Adı</label>
+          <label className="block text-sm font-medium text-gray-300 mb-1">Ürün Adı</label>
           <input 
             type="text" 
             required 
             value={formData.name} 
             onChange={(e) => setFormData({...formData, name: e.target.value})} 
-            className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white outline-none focus:ring-2 focus:ring-orange-500" 
-            placeholder="Örn: Çökertme Kebabı" 
+            className="w-full bg-gray-900 border border-gray-600 rounded-lg p-3 text-white outline-none focus:ring-2 focus:ring-orange-500 transition-all placeholder-gray-600" 
+            placeholder="Örn: Tavuklu Wrap" 
           />
         </div>
 
+        {/* Açıklama */}
         <div>
-          <div className="flex justify-between items-center mb-1">
-            <label className="block text-sm text-gray-400">Açıklama</label>
-            
-            {/* --- SİHİRLİ AI BUTONU --- */}
-            <button 
-                type="button" 
-                onClick={handleGenerateAI}
-                disabled={aiLoading}
-                className="text-xs bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded flex items-center gap-1 transition-colors disabled:opacity-50 animate-pulse"
-            >
-                {aiLoading ? "Yazıyor..." : "✨ AI ile Yaz"}
-            </button>
-          </div>
-          
+          <label className="block text-sm font-medium text-gray-300 mb-1">Açıklama</label>
           <textarea 
             required 
             rows={3}
             value={formData.description} 
             onChange={(e) => setFormData({...formData, description: e.target.value})} 
-            className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white outline-none focus:ring-2 focus:ring-orange-500" 
+            className="w-full bg-gray-900 border border-gray-600 rounded-lg p-3 text-white outline-none focus:ring-2 focus:ring-orange-500 transition-all placeholder-gray-600" 
             placeholder="Ürün içeriği..."
           />
         </div>
 
         <div className="flex gap-4">
+            {/* Fiyat (TL Simgeli) */}
             <div className="w-1/2">
-                <label className="block text-sm text-gray-400 mb-1">Fiyat</label>
-                <input type="number" required value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white outline-none focus:ring-2 focus:ring-orange-500" />
+                <label className="block text-sm font-medium text-gray-300 mb-1">Fiyat</label>
+                <div className="relative">
+                    <input 
+                        type="number" 
+                        required 
+                        value={formData.price} 
+                        onChange={(e) => setFormData({...formData, price: e.target.value})} 
+                        className="w-full bg-gray-900 border border-gray-600 rounded-lg p-3 pr-10 text-white outline-none focus:ring-2 focus:ring-orange-500 transition-all placeholder-gray-600"
+                        placeholder="0"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">TL</span>
+                </div>
             </div>
+            
+            {/* Kategori Seçimi */}
             <div className="w-1/2">
-                <label className="block text-sm text-gray-400 mb-1">Kat ID</label>
-                <input type="number" required value={formData.categoryId} onChange={(e) => setFormData({...formData, categoryId: Number(e.target.value)})} className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white outline-none focus:ring-2 focus:ring-orange-500" />
+                <label className="block text-sm font-medium text-gray-300 mb-1">Kategori</label>
+                <div className="relative">
+                    <select 
+                        value={formData.categoryId} 
+                        onChange={(e) => setFormData({...formData, categoryId: Number(e.target.value)})} 
+                        className="w-full bg-gray-900 border border-gray-600 rounded-lg p-3 text-white outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer appearance-none"
+                    >
+                        <option value="0" disabled>Seçiniz...</option>
+                        {categories.map((cat) => (
+                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                    </select>
+                    {/* Aşağı ok ikonu */}
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                        ▼
+                    </div>
+                </div>
             </div>
         </div>
 
+        {/* Dosya Yükleme */}
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Resim (JPEG/PNG)</label>
+          <label className="block text-sm font-medium text-gray-300 mb-1">Resim (JPEG/PNG)</label>
           <input 
             type="file" 
             accept="image/*"
             onChange={(e) => setFile(e.target.files?.[0] || null)}
-            className="w-full bg-gray-700 text-gray-300 border border-gray-600 rounded cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-orange-600 file:text-white hover:file:bg-orange-700"
+            className="w-full bg-gray-900 text-gray-300 border border-gray-600 rounded-lg cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-gray-700 file:text-white hover:file:bg-gray-600"
           />
         </div>
 
-        <button type="submit" disabled={loading} className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded transition-colors disabled:opacity-50">
-          {loading ? "Yükleniyor..." : "+ Ekle"}
+        <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white font-bold py-3 rounded-lg transition-all transform hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg">
+          {loading ? "Yükleniyor..." : "+ Ürünü Ekle"}
         </button>
       </form>
     </div>

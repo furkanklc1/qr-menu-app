@@ -29,10 +29,7 @@ export class OrdersService {
           })),
         },
       },
-      include: { 
-        table: true,
-        items: { include: { product: true } } 
-      }, 
+      include: { table: true, items: { include: { product: true } } }, 
     });
 
     this.eventsGateway.server.emit('new_order', newOrder);
@@ -41,35 +38,24 @@ export class OrdersService {
 
   findAll() {
     return this.prisma.order.findMany({
-      include: { 
-        table: true, 
-        items: { include: { product: true } } 
-      },
+      include: { table: true, items: { include: { product: true } } },
       orderBy: { createdAt: 'desc' },
     });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} order`;
-  }
+  findOne(id: number) { return `This action returns a #${id} order`; }
 
   async update(id: number, updateOrderDto: any) {
     const updatedOrder = await this.prisma.order.update({
       where: { id },
       data: updateOrderDto,
-      include: { 
-        table: true, 
-        items: { include: { product: true } } 
-      }
+      include: { table: true, items: { include: { product: true } } }
     });
-
     this.eventsGateway.server.emit('order_updated', updatedOrder);
     return updatedOrder;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} order`;
-  }
+  remove(id: number) { return `This action removes a #${id} order`; }
 
   async callWaiter(tableId: number) {
     this.eventsGateway.server.emit('waiter_called', { 
@@ -79,21 +65,38 @@ export class OrdersService {
     return { success: true, message: 'Garsona haber verildi.' };
   }
 
-  // --- İSTATİSTİK RAPORU (GÜNCELLENDİ) ---
-  async getStats() {
-    // 1. Toplam Ciro ve Toplam Sipariş
+  async getStats(range: 'daily' | 'weekly' | 'monthly' = 'weekly') {
+    const now = new Date();
+    let startDate = new Date();
+
+    if (range === 'daily') startDate.setHours(0, 0, 0, 0);
+    else if (range === 'weekly') startDate.setDate(now.getDate() - 7);
+    else if (range === 'monthly') startDate.setMonth(now.getMonth() - 1);
+
     const totalStats = await this.prisma.order.aggregate({
       _sum: { totalAmount: true },
       _count: { id: true },
     });
 
-    // 2. YENİ: Anlık Bekleyen (Aktif) Sipariş Sayısı
-    // Status'ü 'SERVED' (Tamamlandı) OLMAYAN her şeyi say
-    const activeOrders = await this.prisma.order.count({
-      where: { status: { not: 'SERVED' } }
+    const activeOrders = await this.prisma.order.count({ where: { status: { not: 'SERVED' } } });
+
+    const ordersInRange = await this.prisma.order.findMany({
+      where: { createdAt: { gte: startDate }, status: { not: 'CANCELLED' } },
+      orderBy: { createdAt: 'asc' }
     });
 
-    // 3. En Çok Satan 5 Ürün
+    const trendMap = new Map<string, number>();
+    ordersInRange.forEach(order => {
+      let dateKey;
+      if (range === 'daily') dateKey = order.createdAt.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+      else dateKey = order.createdAt.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' });
+      
+      const currentTotal = trendMap.get(dateKey) || 0;
+      trendMap.set(dateKey, currentTotal + Number(order.totalAmount));
+    });
+
+    const salesTrend = Array.from(trendMap, ([name, value]) => ({ name, value }));
+
     const topProducts = await this.prisma.orderItem.groupBy({
       by: ['productId'],
       _sum: { quantity: true },
@@ -103,23 +106,24 @@ export class OrdersService {
 
     const enrichedTopProducts = await Promise.all(
       topProducts.map(async (item) => {
-        const product = await this.prisma.product.findUnique({ 
-            where: { id: item.productId },
-            include: { category: true }
-        });
-        return { 
-            name: product?.name, 
-            categoryName: product?.category?.name || 'Diğer',
-            count: item._sum.quantity 
-        };
+        const product = await this.prisma.product.findUnique({ where: { id: item.productId }, include: { category: true } });
+        return { name: product?.name, categoryName: product?.category?.name || 'Diğer', count: item._sum.quantity };
       })
     );
 
     return {
       totalRevenue: totalStats._sum.totalAmount || 0,
       totalOrders: totalStats._count.id || 0,
-      activeOrders, // <--- Pakete ekledik
+      activeOrders,
+      salesTrend,
       topProducts: enrichedTopProducts,
     };
+  }
+
+  // --- YENİ EKLENEN: SIFIRLAMA ---
+  async resetData() {
+    await this.prisma.orderItem.deleteMany({});
+    await this.prisma.order.deleteMany({});
+    return { message: "Veritabanı temizlendi." };
   }
 }

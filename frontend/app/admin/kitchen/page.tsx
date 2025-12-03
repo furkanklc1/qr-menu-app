@@ -7,7 +7,6 @@ import Cookies from "js-cookie";
 import AdminOrderCard from "../../../components/AdminOrderCard"; 
 import Link from "next/link";
 import toast, { Toaster } from 'react-hot-toast';
-import notificationSound from "../../../public/notification.mp3"; 
 
 interface Order {
   id: number;
@@ -24,6 +23,18 @@ export default function AdminPage() {
   const [isConnected, setIsConnected] = useState(false);
   const router = useRouter();
 
+  // --- SES ÇALMA FONKSİYONU ---
+  const playSound = () => {
+    try {
+      const audio = new Audio("/notification.mp3"); // public klasöründeki dosya
+      audio.play().catch((error) => {
+        console.log("Otomatik oynatma engellendi (Tarayıcı kısıtlaması):", error);
+      });
+    } catch (e) {
+      console.error("Ses dosyası bulunamadı.");
+    }
+  };
+
   const handleLogout = () => {
     if (confirm("Çıkış yapmak istiyor musunuz?")) {
       Cookies.remove("admin_token"); 
@@ -32,6 +43,7 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
+    // 1. REST API ile mevcut siparişleri çek
     fetch("http://localhost:3000/orders")
       .then((res) => res.json())
       .then((data) => {
@@ -39,13 +51,16 @@ export default function AdminPage() {
         setOrders(activeOrders);
       });
 
+    // 2. Socket Bağlantısı
     const socket = io("http://localhost:3000");
 
     socket.on("connect", () => setIsConnected(true));
 
+    // --- YENİ SİPARİŞ GELDİĞİNDE ---
     socket.on("new_order", (newOrder: Order) => {
       setOrders((prev) => [newOrder, ...prev]);
       toast.success(`Masa ${newOrder.tableId} yeni sipariş verdi!`, { duration: 5000 });
+      playSound(); // <--- SESİ ÇAL 🔔
     });
 
     socket.on("order_updated", (updatedOrder: Order) => {
@@ -56,6 +71,7 @@ export default function AdminPage() {
       }
     });
 
+    // --- GARSON ÇAĞRISI GELDİĞİNDE ---
     socket.on("waiter_called", (data: { tableId: number, time: string }) => {
       toast.error(
         (t) => (
@@ -67,6 +83,7 @@ export default function AdminPage() {
         ),
         { duration: 10000, position: "top-right", style: { background: '#EF4444', color: '#fff' } }
       );
+      playSound(); // <--- SESİ ÇAL 🔔
     });
 
     return () => { socket.disconnect(); };
@@ -76,10 +93,8 @@ export default function AdminPage() {
     <div className="min-h-screen bg-gray-900 p-8 text-white">
       <Toaster />
 
-      {/* --- ÜST BAR --- */}
+      {/* ÜST BAR */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-8 border-b border-gray-700 pb-6 gap-4">
-        
-        {/* Sol Taraf: Başlık ve Durum */}
         <div className="flex items-center gap-4">
             <h1 className="text-3xl font-bold text-orange-500">👨‍🍳 Mutfak Ekranı</h1>
             {isConnected ? (
@@ -89,35 +104,23 @@ export default function AdminPage() {
             )}
         </div>
         
-        {/* Sağ Taraf: Navigasyon Butonları */}
         <div className="flex gap-3 items-center flex-wrap justify-center">
-            
-            {/* Ana Menü */}
             <Link href="/admin/home" className="flex items-center gap-2 bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-md border border-gray-500">
                 🏠 Ana Menü
             </Link>
-
-            {/* Menü Yönetimi (Bunu tuttuk çünkü aşçı bazen biten ürünü kapatmak isteyebilir) */}
             <Link href="/admin/products" className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-md border border-gray-600">
                 🍔 Menü Yönetimi
             </Link>
-
-            {/* Çıkış */}
-            <button 
-                onClick={handleLogout} 
-                className="flex items-center gap-2 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-md ml-2"
-            >
+            <button onClick={handleLogout} className="flex items-center gap-2 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-md ml-2">
                 🚪 Çıkış
             </button>
         </div>
       </div>
 
-      {/* Sipariş Sayacı */}
       <div className="mb-4 text-right">
          <span className="text-gray-400 text-sm">Bekleyen Sipariş: <span className="text-white font-bold text-lg">{orders.length}</span></span>
       </div>
 
-      {/* Sipariş Listesi */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {orders.map((order) => (<AdminOrderCard key={order.id} order={order} />))}
         

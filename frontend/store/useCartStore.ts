@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 
-// Sepetteki ürünün tipi
 interface CartItem {
   id: number;
   name: string;
@@ -8,10 +7,10 @@ interface CartItem {
   quantity: number;
 }
 
-// Depomuzun özellikleri
 interface CartStore {
   items: CartItem[];
   addToCart: (product: any) => void;
+  decreaseQuantity: (productId: number) => void; // <--- YENİ
   removeFromCart: (productId: number) => void;
   clearCart: () => void;
   totalPrice: () => number;
@@ -20,14 +19,10 @@ interface CartStore {
 export const useCartStore = create<CartStore>((set, get) => ({
   items: [],
 
-  // Sepete Ekleme Fonksiyonu
   addToCart: (product) => {
     set((state) => {
-      // Ürün zaten sepette var mı?
       const existingItem = state.items.find((item) => item.id === product.id);
-
       if (existingItem) {
-        // Varsa sayısını (quantity) artır
         return {
           items: state.items.map((item) =>
             item.id === product.id
@@ -36,7 +31,6 @@ export const useCartStore = create<CartStore>((set, get) => ({
           ),
         };
       } else {
-        // Yoksa yeni ekle
         return {
           items: [...state.items, { ...product, quantity: 1, price: Number(product.price) }],
         };
@@ -44,16 +38,33 @@ export const useCartStore = create<CartStore>((set, get) => ({
     });
   },
 
-  // Sepetten Çıkarma
+  // --- YENİ: MİKTAR AZALTMA ---
+  decreaseQuantity: (id) => {
+    set((state) => {
+      const existingItem = state.items.find((item) => item.id === id);
+      if (existingItem && existingItem.quantity > 1) {
+        // Miktar 1'den büyükse azalt
+        return {
+          items: state.items.map((item) =>
+            item.id === id ? { ...item, quantity: item.quantity - 1 } : item
+          ),
+        };
+      } else {
+        // 1 ise ve azaltılıyorsa listeden sil
+        return {
+          items: state.items.filter((item) => item.id !== id),
+        };
+      }
+    });
+  },
+
   removeFromCart: (id) =>
     set((state) => ({
       items: state.items.filter((item) => item.id !== id),
     })),
 
-  // Sepeti Boşaltma
   clearCart: () => set({ items: [] }),
 
-  // Toplam Tutar Hesaplama
   totalPrice: () => {
     return get().items.reduce((total, item) => total + item.price * item.quantity, 0);
   },

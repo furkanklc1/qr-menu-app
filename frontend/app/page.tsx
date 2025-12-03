@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Toaster } from "react-hot-toast";
 import ProductCard from "../components/ProductCard";
 import CartCheckout from "../components/CartCheckout";
 import CallWaiterButton from "../components/CallWaiterButton";
@@ -25,14 +26,12 @@ interface Product {
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number>(0); 
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
- 
   useEffect(() => {
     const fetchData = async () => {
       try {
-
         const [prodRes, catRes] = await Promise.all([
           fetch("http://localhost:3000/products"),
           fetch("http://localhost:3000/categories"),
@@ -57,24 +56,31 @@ export default function Home() {
     ? products
     : products.filter((p) => p.categoryId === selectedCategoryId);
 
-  if (loading) return <div className="text-center p-10">Yükleniyor...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-orange-600 font-bold">Yükleniyor...</div>;
 
   return (
     <main className="min-h-screen bg-gray-50 pb-32">
       
-      {}
-      <div className="bg-white shadow-sm p-6 sticky top-0 z-20">
+      <Toaster 
+        position="top-center" 
+        reverseOrder={false}
+        toastOptions={{
+          duration: 2000,
+          style: { background: '#333', color: '#fff', borderRadius: '12px', fontSize: '14px' },
+        }}
+      />
+
+      {/* --- 1. ÜST BAŞLIK (Z-INDEX ARTIRILDI: z-40) --- */}
+      <div className="bg-white shadow-sm p-6 sticky top-0 z-40">
         <h1 className="text-2xl font-bold text-center text-gray-800">
-          🍴 MENÜ 👨‍🍳
+          🍴 MENÜ 📄
         </h1>
         <p className="text-center text-gray-500 text-sm">Hoşgeldiniz, ne yemek istersiniz?</p>
       </div>
 
-      {}
-      <div className="sticky top-[88px] z-10 bg-gray-50 py-4 shadow-sm">
+      {/* --- 2. KATEGORİLER (Z-INDEX ARTIRILDI: z-30) --- */}
+      <div className="sticky top-[88px] z-30 bg-gray-50 py-4 shadow-sm">
         <div className="flex overflow-x-auto px-4 gap-3 no-scrollbar pb-2">
-            
-            {}
             <button
                 onClick={() => setSelectedCategoryId(0)}
                 className={`whitespace-nowrap px-6 py-2 rounded-full font-bold transition-all shadow-sm
@@ -85,7 +91,6 @@ export default function Home() {
                 🍽️ Hepsi
             </button>
 
-            {}
             {categories.map((cat) => (
                 <button
                     key={cat.id}
@@ -101,8 +106,8 @@ export default function Home() {
         </div>
       </div>
 
-      {}
-      <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 container mx-auto">
+      {/* Ürün Listesi */}
+      <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 container mx-auto z-0">
         {filteredProducts.length > 0 ? (
             filteredProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
@@ -114,11 +119,9 @@ export default function Home() {
         )}
       </div>
 
-      {}
       <CartCheckout />
-      
-      {}
       <CallWaiterButton />
+      
     </main>
   );
 }
