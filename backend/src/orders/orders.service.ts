@@ -65,64 +65,122 @@ export class OrdersService {
     return { success: true, message: 'Garsona haber verildi.' };
   }
 
+  // --- GÜNCELLENMİŞ VE FİLTRELİ İSTATİSTİK SERVİSİ ---
   async getStats(range: 'daily' | 'weekly' | 'monthly' = 'weekly') {
     const now = new Date();
-    let startDate = new Date();
+    const startDate = new Date();
+    
+    // 1. Grafik için Boş Şablon Oluştur (Zaman Serisi Doldurma)
+    const chartData: { name: string; value: number }[] = [];
 
-    if (range === 'daily') startDate.setHours(0, 0, 0, 0);
-    else if (range === 'weekly') startDate.setDate(now.getDate() - 7);
-    else if (range === 'monthly') startDate.setMonth(now.getMonth() - 1);
+    if (range === 'daily') {
+      // GÜNLÜK: 00:00 - 23:00 arası saatler
+      startDate.setHours(0, 0, 0, 0);
+      for (let i = 0; i < 24; i++) {
+        const hour = i.toString().padStart(2, '0') + ':00';
+        chartData.push({ name: hour, value: 0 });
+      }
 
-    const totalStats = await this.prisma.order.aggregate({
-      _sum: { totalAmount: true },
-      _count: { id: true },
-    });
+    } else if (range === 'weekly') {
+      // HAFTALIK: Son 7 gün (Pzt, Sal...)
+      startDate.setDate(now.getDate() - 6);
+      startDate.setHours(0,0,0,0);
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(startDate);
+        d.setDate(d.getDate() + i);
+        const dayName = d.toLocaleDateString('tr-TR', { weekday: 'short' }); 
+        chartData.push({ name: dayName, value: 0 });
+      }
 
-    const activeOrders = await this.prisma.order.count({ where: { status: { not: 'SERVED' } } });
+    } else if (range === 'monthly') {
+      // AYLIK: Son 30 gün (1 Nis, 2 Nis...)
+      startDate.setDate(now.getDate() - 29);
+      startDate.setHours(0,0,0,0);
+      for (let i = 0; i < 30; i++) {
+        const d = new Date(startDate);
+        d.setDate(d.getDate() + i);
+        const dayStr = d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+        chartData.push({ name: dayStr, value: 0 });
+      }
+    }
 
+    // 2. Seçili Aralıktaki Siparişleri Çek
     const ordersInRange = await this.prisma.order.findMany({
-      where: { createdAt: { gte: startDate }, status: { not: 'CANCELLED' } },
-      orderBy: { createdAt: 'asc' }
+      where: { 
+        createdAt: { gte: startDate }, 
+        status: { not: 'CANCELLED' } 
+      },
     });
 
-    const trendMap = new Map<string, number>();
+    // 3. Grafik Verilerini Eşle
     ordersInRange.forEach(order => {
-      let dateKey;
-      if (range === 'daily') dateKey = order.createdAt.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-      else dateKey = order.createdAt.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' });
-      
-      const currentTotal = trendMap.get(dateKey) || 0;
-      trendMap.set(dateKey, currentTotal + Number(order.totalAmount));
+      const date = new Date(order.createdAt);
+      let key = '';
+
+      if (range === 'daily') {
+        key = date.getHours().toString().padStart(2, '0') + ':00';
+      } else if (range === 'weekly') {
+        key = date.toLocaleDateString('tr-TR', { weekday: 'short' });
+      } else {
+        key = date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+      }
+
+      const foundIndex = chartData.findIndex(c => c.name === key);
+      if (foundIndex !== -1) {
+        chartData[foundIndex].value += Number(order.totalAmount);
+      }
     });
 
-    const salesTrend = Array.from(trendMap, ([name, value]) => ({ name, value }));
+    // --- DİĞER İSTATİSTİKLER ---
+    
+    const totalRevenue = ordersInRange.reduce((sum, order) => sum + Number(order.totalAmount), 0);
+    const totalOrders = ordersInRange.length;
 
-    const topProducts = await this.prisma.orderItem.groupBy({
+    const activeOrders = await this.prisma.order.count({ 
+      where: { status: { not: 'SERVED' } } 
+    });
+
+    // --- 4. EN ÇOK SATILANLAR (KRİTİK DÜZELTME BURADA) ---
+    // groupBy kullanırken 'where' ekleyerek sadece bu tarih aralığındaki siparişlere (order) ait kalemleri sayıyoruz.
+    const topProductsRaw = await this.prisma.orderItem.groupBy({
       by: ['productId'],
+      where: {
+        order: {
+          createdAt: { gte: startDate }, // <--- ARTIK TARİHE GÖRE FİLTRELİYOR
+          status: { not: 'CANCELLED' }
+        }
+      },
       _sum: { quantity: true },
       orderBy: { _sum: { quantity: 'desc' } },
       take: 5,
     });
 
-    const enrichedTopProducts = await Promise.all(
-      topProducts.map(async (item) => {
-        const product = await this.prisma.product.findUnique({ where: { id: item.productId }, include: { category: true } });
-        return { name: product?.name, categoryName: product?.category?.name || 'Diğer', count: item._sum.quantity };
+    const topProducts = await Promise.all(
+      topProductsRaw.map(async (item) => {
+        const product = await this.prisma.product.findUnique({ 
+          where: { id: item.productId }, 
+          include: { category: true } 
+        });
+        return { 
+          name: product?.name || 'Silinmiş Ürün', 
+          categoryName: product?.category?.name || 'Diğer', 
+          count: item._sum.quantity 
+        };
       })
     );
 
     return {
-      totalRevenue: totalStats._sum.totalAmount || 0,
-      totalOrders: totalStats._count.id || 0,
+      totalRevenue,
+      totalOrders,
       activeOrders,
-      salesTrend,
-      topProducts: enrichedTopProducts,
+      salesTrend: chartData,
+      topProducts,
     };
   }
 
-  // --- YENİ EKLENEN: SIFIRLAMA ---
   async resetData() {
     await this.prisma.orderItem.deleteMany({});
+    await this.prisma.payment.deleteMany({});
     await this.prisma.order.deleteMany({});
     return { message: "Veritabanı temizlendi." };
   }

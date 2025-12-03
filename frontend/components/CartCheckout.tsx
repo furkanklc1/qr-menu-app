@@ -1,15 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { useCartStore } from "../store/useCartStore";
+import OrderTracker from "./OrderTracker";
 
 export default function CartCheckout() {
-  const { items, totalPrice, addToCart, decreaseQuantity, removeFromCart, clearCart } = useCartStore();
+  const { items, totalPrice, addToCart, decreaseQuantity, clearCart } = useCartStore();
   
   const [showCartModal, setShowCartModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   
+  // --- STATE YÖNETİMİ ---
+  const [activeOrderId, setActiveOrderId] = useState<number | null>(null); // Takip ekranını açar
+  const [tempOrderId, setTempOrderId] = useState<number | null>(null);     // Sipariş ID'sini geçici tutar
+
   const [statusModal, setStatusModal] = useState<{ open: boolean; type: 'success' | 'error'; message: string }>({
     open: false, type: 'success', message: ''
   });
@@ -21,23 +26,40 @@ export default function CartCheckout() {
   const [expiry, setExpiry] = useState("");
   const [cvv, setCvv] = useState("");
 
-  // Formatlama Fonksiyonları
+  // --- 1. SAYFA YÜKLENİNCE HAFIZAYI KONTROL ET ---
+  // Sayfa yenilense bile aktif bir sipariş varsa takip ekranını geri getirir.
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedOrderId = localStorage.getItem("activeOrderId");
+      if (savedOrderId) {
+        setActiveOrderId(parseInt(savedOrderId));
+      }
+    }
+  }, []);
+
+  // Input Formatlama Fonksiyonları
   const handleCardChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, "");
-    value = value.replace(/(.{4})/g, "$1 ").trim();
-    setCardNo(value);
+    const rawValue = e.target.value.replace(/\D/g, "");
+    const formattedValue = rawValue.slice(0, 16).replace(/(\d{4})(?=\d)/g, "$1 ");
+    setCardNo(formattedValue);
   };
 
   const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, "");
-    if (value.length > 2) value = value.slice(0, 2) + "/" + value.slice(2, 6);
+    if (value.length > 4) value = value.slice(0, 4);
+    if (value.length > 2) value = value.slice(0, 2) + "/" + value.slice(2);
     setExpiry(value);
   };
 
+  const handleCvvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCvv(e.target.value.replace(/\D/g, "").slice(0, 3));
+  };
+
+  // ÖDEME İŞLEMİ
   const handlePayment = async () => {
     const cleanCardNo = cardNo.replace(/\s/g, "");
     
-    if (cleanCardNo === "1111111111111111" && expiry === "11/2031" && cvv === "111") {
+    if (cleanCardNo === "1111111111111111" && expiry === "11/31" && cvv === "111") {
       try {
         const orderData = {
           tableId: currentTableId,
@@ -55,25 +77,70 @@ export default function CartCheckout() {
         });
 
         if (response.ok) {
+          const newOrder = await response.json();
+          
+          // 1. Modalları kapat ve formu temizle
           setShowPaymentModal(false);
           clearCart(); 
           setCardNo(""); setExpiry(""); setCvv("");
-          setStatusModal({ open: true, type: 'success', message: `MASA ${currentTableId} için siparişiniz alındı! Afiyet olsun.` });
+          
+          // 2. Sipariş ID'sini geçici hafızaya al (Hemen takip ekranını açma)
+          setTempOrderId(newOrder.id);
+
+          // 3. Önce "BAŞARILI" mesajını göster
+          setStatusModal({ 
+            open: true, 
+            type: 'success', 
+            message: `MASA ${currentTableId} için siparişiniz alındı! Afiyet olsun.` 
+          });
+          
         } else {
-          setStatusModal({ open: true, type: 'error', message: 'Bir hata oluştu! Masa bulunamadı.' });
+          setStatusModal({ open: true, type: 'error', message: 'Bir hata oluştu!' });
         }
       } catch (error) {
-        setStatusModal({ open: true, type: 'error', message: 'Sunucu ile iletişim kurulamadı.' });
+        setStatusModal({ open: true, type: 'error', message: 'Sunucu hatası.' });
       }
     } else {
-      setStatusModal({ open: true, type: 'error', message: 'Ödeme Reddedildi! Kart bilgileri hatalı.' });
+      setStatusModal({ open: true, type: 'error', message: 'Kart bilgileri hatalı.' });
+    }
+  };
+
+  // BAŞARI MESAJINDA "TAMAM"A BASINCA ÇALIŞACAK
+  const handleStatusModalClose = () => {
+    // Modal'ı kapat
+    setStatusModal({ ...statusModal, open: false });
+
+    // Eğer işlem başarılıysa ve elimizde bir sipariş ID varsa -> TAKİP EKRANINI AÇ
+    if (statusModal.type === 'success' && tempOrderId) {
+        setActiveOrderId(tempOrderId);
+        // localStorage'a kaydet (Persistence)
+        if (typeof window !== 'undefined') {
+            localStorage.setItem("activeOrderId", tempOrderId.toString());
+        }
+        setTempOrderId(null); // Geçici veriyi temizle
+    }
+  };
+
+  // TAKİP EKRANI KAPATILDIĞINDA (Sipariş tamamlanınca)
+  const handleCloseTracker = () => {
+    setActiveOrderId(null);
+    if (typeof window !== 'undefined') {
+        localStorage.removeItem("activeOrderId"); // Hafızadan sil
     }
   };
 
   return (
     <>
-      {/* --- 1. ALT ÇUBUK --- */}
-      {items.length > 0 && (
+      {/* CANLI SİPARİŞ TAKİP (activeOrderId varsa açılır) */}
+      {activeOrderId && (
+        <OrderTracker 
+            orderId={activeOrderId} 
+            onClose={handleCloseTracker} 
+        />
+      )}
+
+      {/* ALT ÇUBUK (Sepet doluysa ve takip açık değilse görünür) */}
+      {items.length > 0 && !activeOrderId && (
         <div className="fixed bottom-0 left-0 w-full bg-white border-t shadow-[0_-5px_20px_rgba(0,0,0,0.1)] p-4 flex justify-between items-center z-40 animate-in slide-in-from-bottom duration-300">
             <div>
             <p className="text-gray-500 text-sm font-medium">Masa {currentTableId}</p>
@@ -88,7 +155,7 @@ export default function CartCheckout() {
         </div>
       )}
 
-      {/* --- 2. SEPET ÖZETİ MODALI (z-100) --- */}
+      {/* SEPET MODALI */}
       {showCartModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 transition-opacity animate-in fade-in">
           <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 relative flex flex-col max-h-[80vh]">
@@ -108,17 +175,10 @@ export default function CartCheckout() {
                                 <p className="font-bold text-gray-800">{item.name}</p>
                                 <p className="text-orange-600 text-sm font-semibold">{item.price} TL</p>
                             </div>
-                            
                             <div className="flex items-center gap-3 bg-gray-100 rounded-lg p-1">
-                                <button 
-                                    onClick={() => decreaseQuantity(item.id)}
-                                    className="w-8 h-8 flex items-center justify-center bg-white rounded-md shadow-sm text-red-500 font-bold hover:bg-red-50 active:scale-90 transition-transform"
-                                >-</button>
+                                <button onClick={() => decreaseQuantity(item.id)} className="w-8 h-8 flex items-center justify-center bg-white rounded-md shadow-sm text-red-500 font-bold hover:bg-red-50">-</button>
                                 <span className="font-bold text-gray-800 w-4 text-center">{item.quantity}</span>
-                                <button 
-                                    onClick={() => addToCart(item)}
-                                    className="w-8 h-8 flex items-center justify-center bg-white rounded-md shadow-sm text-green-500 font-bold hover:bg-green-50 active:scale-90 transition-transform"
-                                >+</button>
+                                <button onClick={() => addToCart(item)} className="w-8 h-8 flex items-center justify-center bg-white rounded-md shadow-sm text-green-500 font-bold hover:bg-green-50">+</button>
                             </div>
                         </div>
                     ))
@@ -130,22 +190,12 @@ export default function CartCheckout() {
                     <span className="text-gray-600">Toplam Tutar:</span>
                     <span className="text-2xl font-bold text-orange-600">{totalPrice()} TL</span>
                 </div>
-                
                 <button 
                     onClick={() => {
-                        if(items.length > 0) {
-                            setShowCartModal(false);
-                            setShowPaymentModal(true);
-                        } else {
-                            // SEPET BOŞ UYARISI
-                            setStatusModal({ 
-                                open: true, 
-                                type: 'error', 
-                                message: 'Sepetiniz boş! Lütfen önce ürün ekleyin.' 
-                            });
-                        }
+                        if(items.length > 0) { setShowCartModal(false); setShowPaymentModal(true); } 
+                        else { setStatusModal({ open: true, type: 'error', message: 'Sepet boş!' }); }
                     }}
-                    className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3.5 rounded-xl text-lg shadow-lg transition-transform active:scale-95"
+                    className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3.5 rounded-xl text-lg shadow-lg active:scale-95"
                 >
                     Ödemeye Geç &rarr;
                 </button>
@@ -154,40 +204,39 @@ export default function CartCheckout() {
         </div>
       )}
 
-      {/* --- 3. ÖDEME FORMU (MODAL) (z-100) --- */}
+      {/* ÖDEME MODALI */}
       {showPaymentModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 transition-opacity animate-in fade-in">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in">
           <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 relative">
-            
             <div className="bg-orange-50 p-6 flex flex-col items-center justify-center border-b border-orange-100 relative">
-              <button onClick={() => setShowPaymentModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 bg-white rounded-full p-1 transition-colors">
-                 ✕
-              </button>
-              <div className="bg-orange-100 p-3 rounded-full mb-3 shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-8 h-8 text-orange-600"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" /></svg>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900">Ödeme Yap</h3>
-              <p className="text-gray-500 text-sm">Toplam Tutar: <span className="font-bold text-orange-600">{totalPrice()} TL</span></p>
+              <button onClick={() => setShowPaymentModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 bg-white rounded-full p-1">✕</button>
+              <h3 className="text-xl font-bold text-gray-900 mt-2">Ödeme Yap</h3>
+              <p className="text-gray-500 text-sm">Tutar: <span className="font-bold text-orange-600">{totalPrice()} TL</span></p>
             </div>
-
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Kart Numarası</label>
-                <input type="text" placeholder="0000 0000 0000 0000" value={cardNo} onChange={handleCardChange} className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 focus:bg-white outline-none text-gray-800 transition-all font-mono"/>
+                <input type="text" value={cardNo} onChange={handleCardChange} placeholder="0000 0000 0000 0000" maxLength={19} inputMode="numeric" className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 font-mono"/>
               </div>
               <div className="flex gap-4">
-                <div className="w-1/2"><label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">SKT</label><input type="text" placeholder="AY/YIL" value={expiry} onChange={handleExpiryChange} className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 focus:bg-white outline-none text-gray-800 transition-all font-mono"/></div>
-                <div className="w-1/2"><label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">CVV</label><input type="text" placeholder="123" value={cvv} onChange={(e) => setCvv(e.target.value)} className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 focus:bg-white outline-none text-gray-800 transition-all font-mono"/></div>
+                <div className="w-1/2">
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">SKT</label>
+                    <input type="text" value={expiry} onChange={handleExpiryChange} placeholder="AA/YY" maxLength={5} inputMode="numeric" className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 font-mono"/>
+                </div>
+                <div className="w-1/2">
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">CVV</label>
+                    <input type="text" value={cvv} onChange={handleCvvChange} placeholder="123" maxLength={3} inputMode="numeric" className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 font-mono"/>
+                </div>
               </div>
-              <button onClick={handlePayment} className="w-full bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white font-bold py-3.5 rounded-xl text-lg shadow-lg transition-transform active:scale-95 mt-2">Ödemeyi Tamamla</button>
+              <button onClick={handlePayment} className="w-full bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 text-white font-bold py-3.5 rounded-xl text-lg shadow-lg active:scale-95 mt-2">Ödemeyi Tamamla</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* --- 4. SONUÇ BİLDİRİM MODALI (Z-INDEX 150 - EN ÜSTTE) --- */}
+      {/* SONUÇ (BAŞARI/HATA) MODALI */}
       {statusModal.open && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md transition-opacity animate-in fade-in">
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 animate-in zoom-in-95">
                 <div className={`p-8 flex flex-col items-center justify-center text-center border-b ${statusModal.type === 'success' ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'}`}>
                     <div className={`p-4 rounded-full mb-4 shadow-sm ${statusModal.type === 'success' ? 'bg-green-100' : 'bg-red-100'}`}>
@@ -197,7 +246,12 @@ export default function CartCheckout() {
                     <p className="text-gray-600 text-sm mt-2 px-4 leading-relaxed">{statusModal.message}</p>
                 </div>
                 <div className="p-4 bg-white">
-                    <button onClick={() => setStatusModal({ ...statusModal, open: false })} className={`w-full py-3.5 rounded-xl text-white font-bold shadow-md transition-transform active:scale-95 ${statusModal.type === 'success' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}>Tamam</button>
+                    <button 
+                        onClick={handleStatusModalClose}
+                        className={`w-full py-3.5 rounded-xl text-white font-bold shadow-md transition-transform active:scale-95 ${statusModal.type === 'success' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}
+                    >
+                        Tamam
+                    </button>
                 </div>
             </div>
         </div>
