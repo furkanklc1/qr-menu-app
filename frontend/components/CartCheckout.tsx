@@ -26,8 +26,8 @@ export default function CartCheckout() {
   const [expiry, setExpiry] = useState("");
   const [cvv, setCvv] = useState("");
 
-  // --- 1. SAYFA YÜKLENİNCE HAFIZAYI KONTROL ET ---
-  // Sayfa yenilense bile aktif bir sipariş varsa takip ekranını geri getirir.
+  // --- 1. DÜZELTME: BASİT VE GÜVENİLİR HAFIZA KONTROLÜ ---
+  // Backend'e sormadan direkt hafızayı okuyoruz. Böylece hata alma riski yok.
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedOrderId = localStorage.getItem("activeOrderId");
@@ -84,7 +84,7 @@ export default function CartCheckout() {
           clearCart(); 
           setCardNo(""); setExpiry(""); setCvv("");
           
-          // 2. Sipariş ID'sini geçici hafızaya al (Hemen takip ekranını açma)
+          // 2. Sipariş ID'sini geçici hafızaya al
           setTempOrderId(newOrder.id);
 
           // 3. Önce "BAŞARILI" mesajını göster
@@ -107,17 +107,17 @@ export default function CartCheckout() {
 
   // BAŞARI MESAJINDA "TAMAM"A BASINCA ÇALIŞACAK
   const handleStatusModalClose = () => {
-    // Modal'ı kapat
     setStatusModal({ ...statusModal, open: false });
 
-    // Eğer işlem başarılıysa ve elimizde bir sipariş ID varsa -> TAKİP EKRANINI AÇ
+    // Eğer işlem başarılıysa -> TAKİP EKRANINI AÇ ve KAYDET
     if (statusModal.type === 'success' && tempOrderId) {
         setActiveOrderId(tempOrderId);
-        // localStorage'a kaydet (Persistence)
+        
         if (typeof window !== 'undefined') {
-            localStorage.setItem("activeOrderId", tempOrderId.toString());
+            localStorage.setItem("activeOrderId", tempOrderId.toString()); // Kalıcı hafızaya yaz
         }
-        setTempOrderId(null); // Geçici veriyi temizle
+        
+        setTempOrderId(null);
     }
   };
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { toast, Toaster } from "react-hot-toast"; // <--- 1. Kütüphaneyi ekledik
 
 interface Category {
   id: number;
@@ -34,7 +35,7 @@ export default function AddProductForm() {
     e.preventDefault();
 
     if (formData.categoryId === 0) {
-      alert("Lütfen bir kategori seçiniz!");
+      toast.error("Lütfen bir kategori seçiniz!"); // <--- 2. Alert yerine Toast
       return;
     }
 
@@ -56,15 +57,15 @@ export default function AddProductForm() {
       });
 
       if (response.ok) {
-        alert("✅ Ürün Başarıyla Eklendi!");
+        toast.success("✅ Ürün Başarıyla Eklendi!"); // <--- 3. Başarılı bildirimi
         setFormData({ name: "", description: "", price: "", categoryId: 0 });
         setFile(null);
         router.refresh();
       } else {
-        alert("❌ Hata oluştu.");
+        toast.error("❌ Hata oluştu."); // <--- 4. Hata bildirimi
       }
     } catch (error) {
-      alert("Sunucu hatası.");
+      toast.error("Sunucu hatası."); // <--- 5. Sunucu hatası bildirimi
     } finally {
       setLoading(false);
     }
@@ -72,6 +73,9 @@ export default function AddProductForm() {
 
   return (
     <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 h-fit sticky top-8 shadow-xl">
+      {/* 6. Bildirimlerin görüneceği yer (Sağ üst köşe) */}
+      <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+      
       <h2 className="text-xl font-bold text-orange-500 mb-6 flex items-center gap-2">
         <span>✨</span> Yeni Ürün Ekle
       </h2>
@@ -91,11 +95,12 @@ export default function AddProductForm() {
           />
         </div>
 
-        {/* Açıklama */}
+        {/* Açıklama - Zorunlu Değil */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1">Açıklama</label>
+          <label className="block text-sm font-medium text-gray-300 mb-1">
+            Açıklama <span className="text-xs text-gray-500 font-normal ml-1">(İsteğe Bağlı)</span>
+          </label>
           <textarea 
-            required 
             rows={3}
             value={formData.description} 
             onChange={(e) => setFormData({...formData, description: e.target.value})} 

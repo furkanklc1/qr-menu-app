@@ -43,7 +43,12 @@ export class OrdersService {
     });
   }
 
-  findOne(id: number) { return `This action returns a #${id} order`; }
+  async findOne(id: number) {
+    return this.prisma.order.findUnique({
+      where: { id },
+      include: { table: true, items: { include: { product: true } } }
+    });
+  }
 
   async update(id: number, updateOrderDto: any) {
     const updatedOrder = await this.prisma.order.update({
@@ -65,24 +70,28 @@ export class OrdersService {
     return { success: true, message: 'Garsona haber verildi.' };
   }
 
-  // --- GÜNCELLENMİŞ VE FİLTRELİ İSTATİSTİK SERVİSİ ---
+  // --- İSTATİSTİK SERVİSİ (Saat Aralığı Güncellemesi) ---
   async getStats(range: 'daily' | 'weekly' | 'monthly' = 'weekly') {
     const now = new Date();
     const startDate = new Date();
-    
-    // 1. Grafik için Boş Şablon Oluştur (Zaman Serisi Doldurma)
     const chartData: { name: string; value: number }[] = [];
 
     if (range === 'daily') {
-      // GÜNLÜK: 00:00 - 23:00 arası saatler
       startDate.setHours(0, 0, 0, 0);
-      for (let i = 0; i < 24; i++) {
-        const hour = i.toString().padStart(2, '0') + ':00';
-        chartData.push({ name: hour, value: 0 });
+      // RESTORAN ÇALIŞMA SAATLERİ: 08:00 - 00:00
+      // Döngüyü 0 yerine 8'den başlatıyoruz
+      for (let i = 8; i < 24; i++) {
+        // Mevcut saat: "08.00"
+        const startHour = i.toString().padStart(2, '0') + '.00';
+        // Bitiş saati: "09.00" (Eğer 23 ise 00 olur)
+        const endHour = ((i + 1) % 24).toString().padStart(2, '0') + '.00';
+        
+        // Etiket: "08.00-09.00"
+        const label = `${startHour}-${endHour}`;
+        
+        chartData.push({ name: label, value: 0 });
       }
-
     } else if (range === 'weekly') {
-      // HAFTALIK: Son 7 gün (Pzt, Sal...)
       startDate.setDate(now.getDate() - 6);
       startDate.setHours(0,0,0,0);
       for (let i = 0; i < 7; i++) {
@@ -91,9 +100,7 @@ export class OrdersService {
         const dayName = d.toLocaleDateString('tr-TR', { weekday: 'short' }); 
         chartData.push({ name: dayName, value: 0 });
       }
-
     } else if (range === 'monthly') {
-      // AYLIK: Son 30 gün (1 Nis, 2 Nis...)
       startDate.setDate(now.getDate() - 29);
       startDate.setHours(0,0,0,0);
       for (let i = 0; i < 30; i++) {
@@ -104,7 +111,6 @@ export class OrdersService {
       }
     }
 
-    // 2. Seçili Aralıktaki Siparişleri Çek
     const ordersInRange = await this.prisma.order.findMany({
       where: { 
         createdAt: { gte: startDate }, 
@@ -112,41 +118,33 @@ export class OrdersService {
       },
     });
 
-    // 3. Grafik Verilerini Eşle
     ordersInRange.forEach(order => {
       const date = new Date(order.createdAt);
       let key = '';
 
       if (range === 'daily') {
-        key = date.getHours().toString().padStart(2, '0') + ':00';
-      } else if (range === 'weekly') {
-        key = date.toLocaleDateString('tr-TR', { weekday: 'short' });
-      } else {
-        key = date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
-      }
+        const h = date.getHours();
+        // Eğer sipariş saati çalışma saatleri dışındaysa (örn: 07:00), grafiğe dahil edilmeyecek
+        const startH = h.toString().padStart(2, '0') + '.00';
+        const endH = ((h + 1) % 24).toString().padStart(2, '0') + '.00';
+        key = `${startH}-${endH}`;
+      } 
+      else if (range === 'weekly') key = date.toLocaleDateString('tr-TR', { weekday: 'short' });
+      else key = date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
 
       const foundIndex = chartData.findIndex(c => c.name === key);
-      if (foundIndex !== -1) {
-        chartData[foundIndex].value += Number(order.totalAmount);
-      }
+      if (foundIndex !== -1) chartData[foundIndex].value += Number(order.totalAmount);
     });
 
-    // --- DİĞER İSTATİSTİKLER ---
-    
     const totalRevenue = ordersInRange.reduce((sum, order) => sum + Number(order.totalAmount), 0);
     const totalOrders = ordersInRange.length;
+    const activeOrders = await this.prisma.order.count({ where: { status: { not: 'SERVED' } } });
 
-    const activeOrders = await this.prisma.order.count({ 
-      where: { status: { not: 'SERVED' } } 
-    });
-
-    // --- 4. EN ÇOK SATILANLAR (KRİTİK DÜZELTME BURADA) ---
-    // groupBy kullanırken 'where' ekleyerek sadece bu tarih aralığındaki siparişlere (order) ait kalemleri sayıyoruz.
     const topProductsRaw = await this.prisma.orderItem.groupBy({
       by: ['productId'],
       where: {
         order: {
-          createdAt: { gte: startDate }, // <--- ARTIK TARİHE GÖRE FİLTRELİYOR
+          createdAt: { gte: startDate },
           status: { not: 'CANCELLED' }
         }
       },
@@ -169,13 +167,7 @@ export class OrdersService {
       })
     );
 
-    return {
-      totalRevenue,
-      totalOrders,
-      activeOrders,
-      salesTrend: chartData,
-      topProducts,
-    };
+    return { totalRevenue, totalOrders, activeOrders, salesTrend: chartData, topProducts };
   }
 
   async resetData() {
