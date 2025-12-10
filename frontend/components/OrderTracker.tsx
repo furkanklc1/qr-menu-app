@@ -11,13 +11,32 @@ interface OrderTrackerProps {
 type OrderStatus = 'PENDING' | 'PREPARING' | 'READY' | 'SERVED' | 'CANCELLED';
 
 export default function OrderTracker({ orderId, onClose }: OrderTrackerProps) {
+  // Varsayılan olarak PENDING başlar ama hemen aşağıda güncelleyeceğiz
   const [status, setStatus] = useState<OrderStatus>('PENDING');
   const [isMinimized, setIsMinimized] = useState(false);
 
   useEffect(() => {
-    // Backend bağlantısı
+    // 1. ADIM: Sayfa yenilendiğinde güncel durumu Backend'den çek!
+    const fetchLatestStatus = async () => {
+      try {
+        const res = await fetch(`http://localhost:3000/orders/${orderId}`);
+        if (res.ok) {
+          const data = await res.json();
+          // Backend'den gelen gerçek durumu ayarla
+          setStatus(data.status); 
+        }
+      } catch (error) {
+        console.error("Durum çekilemedi:", error);
+      }
+    };
+
+    // Fonksiyonu çalıştır
+    fetchLatestStatus();
+
+    // 2. ADIM: Canlı değişiklikleri dinle (Socket.io)
     const socket = io("http://localhost:3000", {
       transports: ["websocket"],
+      reconnectionAttempts: 5,
     });
 
     socket.on("order_updated", (updatedOrder: any) => {
@@ -64,7 +83,6 @@ export default function OrderTracker({ orderId, onClose }: OrderTrackerProps) {
             <div className="bg-gray-900 text-white p-3 flex justify-between items-center px-4 relative overflow-hidden">
                 {status === 'PREPARING' && <div className="absolute inset-0 bg-orange-600/20 animate-pulse"></div>}
 
-                {/* DÜZELTME: gap-6 yapıldı ve ikona shrink-0 eklendi */}
                 <div className="flex items-center gap-6 relative z-10">
                     <div className="w-10 h-10 shrink-0 rounded-full bg-white/10 flex items-center justify-center text-xl">
                         {currentStage.icon}

@@ -5,6 +5,8 @@ import { Toaster } from "react-hot-toast";
 import ProductCard from "../components/ProductCard";
 import CartCheckout from "../components/CartCheckout";
 import CallWaiterButton from "../components/CallWaiterButton";
+import OrderTracker from "../components/OrderTracker"; 
+import { useCartStore } from "../store/useCartStore"; 
 
 interface Category {
   id: number;
@@ -30,6 +32,8 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState(""); 
   const [loading, setLoading] = useState(true);
 
+  const { orderId, setOrderId } = useCartStore(); 
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -53,12 +57,8 @@ export default function Home() {
     fetchData();
   }, []);
 
-  // --- GELİŞMİŞ FİLTRELEME MANTIĞI ---
   const filteredProducts = products.filter((p) => {
-    // 1. Kategori Kontrolü
     const matchesCategory = selectedCategoryId === 0 || p.categoryId === selectedCategoryId;
-    
-    // 2. Arama Metni Kontrolü
     const searchLower = searchTerm.toLowerCase();
     const matchesSearch = 
         p.name.toLowerCase().includes(searchLower) || 
@@ -70,7 +70,7 @@ export default function Home() {
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-orange-600 font-bold animate-pulse">Menü Yükleniyor...</div>;
 
   return (
-    <main className="min-h-screen bg-gray-50 pb-32 font-sans">
+    <main className="min-h-screen bg-gray-50 pb-32 font-sans relative overflow-x-hidden">
       
       <Toaster 
         position="top-center" 
@@ -81,28 +81,31 @@ export default function Home() {
         }}
       />
 
-      {/* --- TASARIM GÜNCELLEMESİ: MİNİMAL & FERAH BEYAZ HEADER --- */}
+      {/* --- SİPARİŞ TAKİP EKRANI --- */}
+      {orderId && (
+        <OrderTracker 
+            orderId={orderId} 
+            onClose={() => setOrderId(null)} 
+        />
+      )}
+      
       <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl shadow-sm border-b border-gray-100 transition-all duration-300">
-        
-        {/* 1. ÜST KISIM: BAŞLIK & ARAMA */}
         <div className="pt-4 pb-2 px-4">
             <div className="flex flex-col items-center mb-4">
                 <h1 className="text-2xl font-extrabold text-gray-800 tracking-tight flex items-center gap-2">
                   <span className=" text-orange-600 p-1.5 rounded-lg">🍴</span>
                   QR MENÜ 🥣
                 </h1>
-                <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mt-1"></p>
             </div>
 
-            {/* Arama Çubuğu (Gri Zemin - Gözü yormaz) */}
-            <div className="max-w-md mx-auto relative group">
+            {/* ARAMA ÇUBUĞU (Mobilde daha geniş: w-full eklendi) */}
+            <div className="w-full max-w-lg mx-auto relative group">
                 <input 
                     type="text" 
                     placeholder="Arama (Örn: Adana Kebap)" 
                     value={searchTerm}
                     onChange={(e) => {
                         setSearchTerm(e.target.value);
-                        // UX İYİLEŞTİRMESİ: Arama yapıldığı an otomatik "Tümü" kategorisine geç
                         if (e.target.value.length > 0) {
                             setSelectedCategoryId(0);
                         }
@@ -112,7 +115,6 @@ export default function Home() {
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-gray-400 absolute left-4 top-3.5 group-focus-within:text-orange-500 transition-colors">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
                 </svg>
-                
                 {searchTerm && (
                     <button 
                         onClick={() => setSearchTerm("")}
@@ -126,13 +128,12 @@ export default function Home() {
             </div>
         </div>
 
-        {/* 2. ALT KISIM: KATEGORİLER (Yumuşak Geçişler) */}
         <div className="pb-3 pt-1">
             <div className="flex overflow-x-auto px-4 gap-2 no-scrollbar pb-2 max-w-6xl mx-auto">
                 <button
                     onClick={() => {
                         setSelectedCategoryId(0);
-                        setSearchTerm(""); // "Tümü"ne basınca aramayı temizle
+                        setSearchTerm("");
                     }}
                     className={`whitespace-nowrap px-4 py-2 rounded-xl text-sm font-bold transition-all border
                     ${selectedCategoryId === 0 
@@ -158,8 +159,8 @@ export default function Home() {
         </div>
       </div>
 
-      {/* --- 3. ÜRÜN LİSTESİ --- */}
-      <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 container mx-auto z-0 max-w-6xl mt-4">
+      {/* --- YENİ GRİD SİSTEMİ (Mobil: 2'li, Tablet: 3'lü, Masaüstü: 4'lü) --- */}
+      <div className="px-3 py-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6 container mx-auto z-0 max-w-6xl mt-2">
         {filteredProducts.length > 0 ? (
             filteredProducts.map((product) => (
             <ProductCard key={product.id} product={product} />

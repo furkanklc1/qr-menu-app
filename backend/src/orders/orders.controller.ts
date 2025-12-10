@@ -21,6 +21,14 @@ export class OrdersController {
     return this.ordersService.getStats(range);
   }
 
+  // --- EKSİK OLAN KISIM BURASIYDI! ---
+  // Tek bir siparişin detayını (ve durumunu) getiren endpoint
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.ordersService.findOne(+id);
+  }
+  // -----------------------------------
+
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateOrderDto: any) {
     return this.ordersService.update(+id, updateOrderDto);
@@ -31,7 +39,6 @@ export class OrdersController {
     return this.ordersService.callWaiter(body.tableId);
   }
 
-  // --- YENİ EKLENEN: DELETE /reset ---
   @Delete('reset')
   resetData() {
     return this.ordersService.resetData();

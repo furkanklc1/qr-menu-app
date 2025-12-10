@@ -1,19 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useCartStore } from "../store/useCartStore";
-import OrderTracker from "./OrderTracker";
 
 export default function CartCheckout() {
-  const { items, totalPrice, addToCart, decreaseQuantity, clearCart } = useCartStore();
+  const { 
+    items, 
+    totalPrice, 
+    addToCart, 
+    decreaseQuantity, 
+    clearCart, 
+    orderId,       
+    setOrderId     
+  } = useCartStore();
   
   const [showCartModal, setShowCartModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   
-  // --- STATE YÖNETİMİ ---
-  const [activeOrderId, setActiveOrderId] = useState<number | null>(null); // Takip ekranını açar
-  const [tempOrderId, setTempOrderId] = useState<number | null>(null);     // Sipariş ID'sini geçici tutar
+  const [tempOrderId, setTempOrderId] = useState<number | null>(null);    
 
   const [statusModal, setStatusModal] = useState<{ open: boolean; type: 'success' | 'error'; message: string }>({
     open: false, type: 'success', message: ''
@@ -26,18 +31,6 @@ export default function CartCheckout() {
   const [expiry, setExpiry] = useState("");
   const [cvv, setCvv] = useState("");
 
-  // --- 1. DÜZELTME: BASİT VE GÜVENİLİR HAFIZA KONTROLÜ ---
-  // Backend'e sormadan direkt hafızayı okuyoruz. Böylece hata alma riski yok.
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedOrderId = localStorage.getItem("activeOrderId");
-      if (savedOrderId) {
-        setActiveOrderId(parseInt(savedOrderId));
-      }
-    }
-  }, []);
-
-  // Input Formatlama Fonksiyonları
   const handleCardChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value.replace(/\D/g, "");
     const formattedValue = rawValue.slice(0, 16).replace(/(\d{4})(?=\d)/g, "$1 ");
@@ -55,7 +48,6 @@ export default function CartCheckout() {
     setCvv(e.target.value.replace(/\D/g, "").slice(0, 3));
   };
 
-  // ÖDEME İŞLEMİ
   const handlePayment = async () => {
     const cleanCardNo = cardNo.replace(/\s/g, "");
     
@@ -79,15 +71,12 @@ export default function CartCheckout() {
         if (response.ok) {
           const newOrder = await response.json();
           
-          // 1. Modalları kapat ve formu temizle
           setShowPaymentModal(false);
           clearCart(); 
           setCardNo(""); setExpiry(""); setCvv("");
           
-          // 2. Sipariş ID'sini geçici hafızaya al
           setTempOrderId(newOrder.id);
 
-          // 3. Önce "BAŞARILI" mesajını göster
           setStatusModal({ 
             open: true, 
             type: 'success', 
@@ -105,42 +94,21 @@ export default function CartCheckout() {
     }
   };
 
-  // BAŞARI MESAJINDA "TAMAM"A BASINCA ÇALIŞACAK
   const handleStatusModalClose = () => {
     setStatusModal({ ...statusModal, open: false });
 
-    // Eğer işlem başarılıysa -> TAKİP EKRANINI AÇ ve KAYDET
     if (statusModal.type === 'success' && tempOrderId) {
-        setActiveOrderId(tempOrderId);
-        
-        if (typeof window !== 'undefined') {
-            localStorage.setItem("activeOrderId", tempOrderId.toString()); // Kalıcı hafızaya yaz
-        }
-        
+        setOrderId(tempOrderId); 
         setTempOrderId(null);
-    }
-  };
-
-  // TAKİP EKRANI KAPATILDIĞINDA (Sipariş tamamlanınca)
-  const handleCloseTracker = () => {
-    setActiveOrderId(null);
-    if (typeof window !== 'undefined') {
-        localStorage.removeItem("activeOrderId"); // Hafızadan sil
     }
   };
 
   return (
     <>
-      {/* CANLI SİPARİŞ TAKİP (activeOrderId varsa açılır) */}
-      {activeOrderId && (
-        <OrderTracker 
-            orderId={activeOrderId} 
-            onClose={handleCloseTracker} 
-        />
-      )}
-
-      {/* ALT ÇUBUK (Sepet doluysa ve takip açık değilse görünür) */}
-      {items.length > 0 && !activeOrderId && (
+      {/* DÜZELTME: "!orderId" kontrolünü kaldırdık. 
+        Artık aktif sipariş olsa bile, sepette ürün varsa buton görünür.
+      */}
+      {items.length > 0 && (
         <div className="fixed bottom-0 left-0 w-full bg-white border-t shadow-[0_-5px_20px_rgba(0,0,0,0.1)] p-4 flex justify-between items-center z-40 animate-in slide-in-from-bottom duration-300">
             <div>
             <p className="text-gray-500 text-sm font-medium">Masa {currentTableId}</p>

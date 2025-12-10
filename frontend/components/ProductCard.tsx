@@ -5,7 +5,7 @@ import { useCartStore } from "../store/useCartStore";
 
 export default function ProductCard({ product }: { product: any }) {
   const addToCart = useCartStore((state) => state.addToCart);
-  const [isImageModalOpen, setIsImageModalOpen] = useState(false); // Resim açık mı?
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   // Resim URL Düzeltici
   const getImageUrl = (path: string) => {
@@ -18,61 +18,64 @@ export default function ProductCard({ product }: { product: any }) {
 
   return (
     <>
-      <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow overflow-hidden flex flex-col h-full border border-gray-100 group">
+      <div className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col h-full border border-gray-100 group relative">
         
-        {/* Ürün Resmi (Tıklanabilir Alan) */}
+        {/* Ürün Resmi (Mobilde yükseklik h-40, Masaüstünde h-48) */}
         <div 
-            className="relative h-48 w-full bg-gray-200 cursor-pointer overflow-hidden"
+            className="relative h-40 sm:h-48 w-full bg-gray-100 cursor-pointer overflow-hidden"
             onClick={() => setIsImageModalOpen(true)}
         >
           {imageUrl ? (
               <img 
                   src={imageUrl} 
                   alt={product.name} 
+                  loading="lazy"
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
               />
           ) : (
               <div className="flex items-center justify-center h-full text-4xl">🍔</div>
           )}
           
-          {/* --- SADECE BURASI DEĞİŞTİ: Emoji yerine SVG İkon --- */}
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[1px]">
-             {/* Profesyonel Genişletme İkonu (SVG) */}
-             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-10 h-10 text-white drop-shadow-xl transform group-hover:scale-110 transition-transform">
-               <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+          {/* Zoom İkonu */}
+          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[1px]">
+             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-8 h-8 text-white drop-shadow-md transform group-hover:scale-110 transition-transform">
+               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6" />
              </svg>
           </div>
 
-          {/* Fiyat Etiketi */}
-          <span className="absolute top-3 right-3 bg-white/90 backdrop-blur text-gray-900 text-sm font-bold px-3 py-1 rounded-full shadow-sm border border-gray-200 z-10">
+          {/* Fiyat Etiketi (Mobilde yazı boyutu optimize edildi) */}
+          <span className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-white/95 backdrop-blur text-gray-900 text-xs sm:text-sm font-bold px-2 py-1 sm:px-3 sm:py-1 rounded-full shadow-sm border border-gray-200 z-10">
             {product.price} TL
           </span>
         </div>
 
-        {/* İçerik */}
-        <div className="p-5 flex flex-col flex-1">
+        {/* İçerik (Padding mobilde p-3, masaüstünde p-5) */}
+        <div className="p-3 sm:p-5 flex flex-col flex-1">
           <div className="mb-auto">
-              <span className="text-xs font-bold text-orange-600 uppercase tracking-wide">
+              <span className="text-[10px] sm:text-xs font-bold text-orange-600 uppercase tracking-wide">
               {product.category?.name}
               </span>
-              <h2 className="text-lg font-bold text-gray-800 mt-1 leading-tight">
+              
+              {/* Başlık mobilde taşmasın diye satır sınırlaması */}
+              <h2 className="text-sm sm:text-lg font-bold text-gray-800 mt-1 leading-tight line-clamp-2 min-h-[2.5em]">
               {product.name}
               </h2>
-              <p className="text-gray-500 mt-2 text-sm line-clamp-2">
+              
+              {/* Açıklama mobilde daha küçük */}
+              <p className="text-gray-500 mt-1 sm:mt-2 text-xs sm:text-sm line-clamp-2">
               {product.description}
               </p>
           </div>
 
           <button 
             onClick={(e) => {
-                e.stopPropagation(); // Karta tıklayınca resim açılmasın, sadece sepete eklesin
+                e.stopPropagation(); // Karta tıklayınca resim açılmasın
                 addToCart(product);
             }}
-            // Diğer kısımlar (Sepete Ekle +) orijinal halinde bırakıldı.
-            className="mt-4 w-full bg-orange-100 hover:bg-orange-200 text-orange-700 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 active:scale-95 transform duration-100"
+            className="mt-3 sm:mt-4 w-full bg-orange-100 hover:bg-orange-200 text-orange-700 font-bold py-2 sm:py-3 px-3 rounded-lg transition-colors flex items-center justify-center gap-2 active:scale-95 transform duration-100 text-xs sm:text-sm"
           >
-            <span>Sepete Ekle</span>
-            <span className="text-xl">+</span>
+            <span>Ekle</span>
+            <span className="text-lg leading-none">+</span>
           </button>
         </div>
       </div>
@@ -80,30 +83,26 @@ export default function ProductCard({ product }: { product: any }) {
       {/* --- RESİM BÜYÜTME PENCERESİ (MODAL) --- */}
       {isImageModalOpen && imageUrl && (
         <div 
-            className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300"
+            className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 animate-in fade-in"
             onClick={() => setIsImageModalOpen(false)}
         >
-            <div className="relative max-w-4xl w-full max-h-screen flex flex-col items-center animate-in fade-in zoom-in duration-200">
-                {/* Kapat Butonu (Orijinal halinde bırakıldı) */}
+            <div className="relative w-full max-w-lg flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
                 <button 
                     onClick={() => setIsImageModalOpen(false)}
-                    className="absolute -top-12 right-0 text-white hover:text-gray-300 text-4xl font-bold transition-colors"
+                    className="absolute -top-12 right-0 sm:-right-8 text-white/80 hover:text-white text-4xl font-bold transition-colors p-2"
                 >
                     &times;
                 </button>
 
-                {/* Büyük Resim */}
                 <img 
                     src={imageUrl} 
                     alt={product.name} 
-                    className="max-w-full max-h-[80vh] rounded-lg shadow-2xl object-contain border border-gray-700"
-                    onClick={(e) => e.stopPropagation()}
+                    className="w-full max-h-[70vh] object-contain rounded-lg shadow-2xl bg-black"
                 />
 
-                {/* Alt Bilgi */}
-                <div className="mt-4 text-center" onClick={(e) => e.stopPropagation()}>
-                    <h3 className="text-2xl font-bold text-white">{product.name}</h3>
-                    <p className="text-orange-400 font-bold text-xl mt-1">{product.price} TL</p>
+                <div className="mt-4 text-center">
+                    <h3 className="text-xl sm:text-2xl font-bold text-white">{product.name}</h3>
+                    <p className="text-orange-400 font-bold text-lg mt-1">{product.price} TL</p>
                 </div>
             </div>
         </div>
