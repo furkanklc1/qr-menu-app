@@ -31,10 +31,10 @@ export default function AdminHub() {
             </button>
         </div>
 
-        {/* --- BUTONLAR IZGARASI --- */}
+        {/* BUTONLAR IZGARASI */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             
-            {/* 1. Mutfak Ekranı */}
+            {/* Mutfak Ekranı */}
             <Link href="/admin/kitchen" className="group">
                 <div className="bg-gray-800 hover:bg-gray-750 border-2 border-gray-700 hover:border-orange-500 p-8 rounded-2xl transition-all duration-300 transform hover:-translate-y-1 shadow-xl flex items-center gap-6 cursor-pointer">
                     <div className="text-5xl bg-gray-700 p-4 rounded-full group-hover:bg-orange-600 transition-colors">👨‍🍳</div>
@@ -45,7 +45,7 @@ export default function AdminHub() {
                 </div>
             </Link>
 
-            {/* 2. Menü Yönetimi */}
+            {/* Menü Yönetimi */}
             <Link href="/admin/products" className="group">
                 <div className="bg-gray-800 hover:bg-gray-750 border-2 border-gray-700 hover:border-blue-500 p-8 rounded-2xl transition-all duration-300 transform hover:-translate-y-1 shadow-xl flex items-center gap-6 cursor-pointer">
                     <div className="text-5xl bg-gray-700 p-4 rounded-full group-hover:bg-blue-600 transition-colors">🍔</div>
@@ -56,7 +56,7 @@ export default function AdminHub() {
                 </div>
             </Link>
 
-            {/* 3. İstatistikler */}
+            {/* İstatistikler */}
             <Link href="/admin/dashboard" className="group">
                 <div className="bg-gray-800 hover:bg-gray-750 border-2 border-gray-700 hover:border-green-500 p-8 rounded-2xl transition-all duration-300 transform hover:-translate-y-1 shadow-xl flex items-center gap-6 cursor-pointer">
                     <div className="text-5xl bg-gray-700 p-4 rounded-full group-hover:bg-green-600 transition-colors">📊</div>
@@ -67,7 +67,7 @@ export default function AdminHub() {
                 </div>
             </Link>
 
-            {/* 4. QR Kod Merkezi */}
+            {/* QR Kod Merkezi */}
             <Link href="/admin/qr-codes" className="group">
                 <div className="bg-gray-800 hover:bg-gray-750 border-2 border-gray-700 hover:border-purple-500 p-8 rounded-2xl transition-all duration-300 transform hover:-translate-y-1 shadow-xl flex items-center gap-6 cursor-pointer">
                     <div className="text-5xl bg-gray-700 p-4 rounded-full group-hover:bg-purple-600 transition-colors">🖨️</div>

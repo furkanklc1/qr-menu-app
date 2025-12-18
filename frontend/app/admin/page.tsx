@@ -13,7 +13,7 @@ export default function LoginPage() {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // ŞİFREYİ STANDARDA ÇEVİRDİK: admin / admin
+    // Şifre
     if (username === "admin" && password === "boss123") {
       Cookies.set("admin_token", "super-secret-key", { expires: 1 });
       router.push("/admin/home"); 
