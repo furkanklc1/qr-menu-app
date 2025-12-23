@@ -34,6 +34,16 @@ export class OrdersController {
     return this.ordersService.update(+id, updateOrderDto);
   }
 
+  @Patch(':id/assign-waiter')
+  assignWaiter(@Param('id') id: string, @Body() body: { waiterId: number }) {
+    return this.ordersService.assignWaiter(+id, body.waiterId);
+  }
+
+  @Patch(':id/priority')
+  setPriority(@Param('id') id: string, @Body() body: { priority: 'LOW' | 'NORMAL' | 'HIGH' | 'VIP' }) {
+    return this.ordersService.setPriority(+id, body.priority);
+  }
+
   @Post('call-waiter')
   callWaiter(@Body() body: { tableId: number }) {
     return this.ordersService.callWaiter(body.tableId);

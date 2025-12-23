@@ -42,15 +42,31 @@ model Product {
   orderItems  OrderItem[]
 }
 
+// Garsonlar
+model Waiter {
+  id          Int      @id @default(autoincrement())
+  name        String
+  status      WaiterStatus @default(AVAILABLE)
+  createdAt   DateTime @default(now())
+  
+  orders      Order[]
+}
+
 // Siparişler
 model Order {
   id          Int         @id @default(autoincrement())
   createdAt   DateTime    @default(now())
+  readyAt     DateTime?   // Hazır olduğu zaman
+  servedAt    DateTime?   // Servis edildiği zaman
   status      OrderStatus @default(PENDING)
+  priority    OrderPriority @default(NORMAL)
   totalAmount Decimal     @db.Decimal(10, 2)
   
   tableId     Int
   table       Table       @relation(fields: [tableId], references: [id])
+  
+  waiterId    Int?
+  waiter      Waiter?     @relation(fields: [waiterId], references: [id])
   
   items       OrderItem[]
   payment     Payment?
@@ -99,4 +115,17 @@ enum PaymentStatus {
   PENDING
   SUCCESS
   FAILED
+}
+
+enum WaiterStatus {
+  AVAILABLE
+  BUSY
+  ON_BREAK
+}
+
+enum OrderPriority {
+  LOW
+  NORMAL
+  HIGH
+  VIP
 }

@@ -100,7 +100,7 @@ export default function AdminOrderCard({ order }: { order: any }) {
                 disabled={loading}
                 className="col-span-2 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded transition-colors"
             >
-                {loading ? "..." : "✅ Servise Çıkar"}
+                {loading ? "..." : "✅ Servise Hazır"}
             </button>
         )}
         

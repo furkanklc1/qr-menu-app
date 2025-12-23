@@ -38,7 +38,11 @@ export class OrdersService {
 
   findAll() {
     return this.prisma.order.findMany({
-      include: { table: true, items: { include: { product: true } } },
+      include: { 
+        table: true, 
+        items: { include: { product: true } },
+        waiter: true
+      },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -46,18 +50,46 @@ export class OrdersService {
   async findOne(id: number) {
     return this.prisma.order.findUnique({
       where: { id },
-      include: { table: true, items: { include: { product: true } } }
+      include: { 
+        table: true, 
+        items: { include: { product: true } },
+        waiter: true
+      }
     });
   }
 
   async update(id: number, updateOrderDto: any) {
+    const updateData: any = { ...updateOrderDto };
+    
+    // READY durumuna geçtiğinde readyAt'i kaydet
+    if (updateOrderDto.status === 'READY' && !updateOrderDto.readyAt) {
+      updateData.readyAt = new Date();
+    }
+    
+    // SERVED durumuna geçtiğinde servedAt'i kaydet
+    if (updateOrderDto.status === 'SERVED' && !updateOrderDto.servedAt) {
+      updateData.servedAt = new Date();
+    }
+
     const updatedOrder = await this.prisma.order.update({
       where: { id },
-      data: updateOrderDto,
-      include: { table: true, items: { include: { product: true } } }
+      data: updateData,
+      include: { 
+        table: true, 
+        items: { include: { product: true } },
+        waiter: true
+      }
     });
     this.eventsGateway.server.emit('order_updated', updatedOrder);
     return updatedOrder;
+  }
+
+  async assignWaiter(orderId: number, waiterId: number) {
+    return this.update(orderId, { waiterId });
+  }
+
+  async setPriority(orderId: number, priority: 'LOW' | 'NORMAL' | 'HIGH' | 'VIP') {
+    return this.update(orderId, { priority });
   }
 
   remove(id: number) { return `This action removes a #${id} order`; }

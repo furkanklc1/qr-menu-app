@@ -51,10 +51,10 @@ export default function OrderTracker({ orderId, onClose }: OrderTrackerProps) {
   }, [orderId]);
 
   const stages: { id: OrderStatus; label: string; icon: string; desc: string; progress: number }[] = [
-    { id: 'PENDING', label: 'Alındı', icon: '📝', desc: 'Sipariş iletildi.', progress: 25 },
+    { id: 'PENDING', label: 'Alındı', icon: '📝', desc: 'Siparişiniz restorana iletildi.', progress: 25 },
     { id: 'PREPARING', label: 'Hazırlanıyor', icon: '🔥', desc: 'Mutfakta hazırlanıyor.', progress: 50 },
-    { id: 'READY', label: 'Servise Çıktı', icon: '🚀', desc: 'Masanıza geliyor.', progress: 75 },
-    { id: 'SERVED', label: 'Tamamlandı', icon: '😋', desc: 'Afiyet olsun.', progress: 100 },
+    { id: 'READY', label: 'Hazır', icon: '🍽️', desc: 'Siparişiniz hazır', progress: 75 },
+    { id: 'SERVED', label: 'Servise Çıktı', icon: '🚀', desc: 'Siparişiniz birazdan masanıza getirilecek. Afiyet olsun.', progress: 100 },
   ];
 
   const currentStageIndex = stages.findIndex((s) => s.id === status);

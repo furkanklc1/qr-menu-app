@@ -18,8 +18,11 @@ export default async function AdminProductsPage() {
         <h1 className="text-3xl font-bold text-orange-500">
           🍔 Menü Yönetimi
         </h1>
-        <Link href="/admin/home" className="text-gray-400 hover:text-white transition-colors flex items-center gap-2">
-        <span>🏠</span> Ana Menüye Dön
+        <Link
+          href="/admin/home"
+          className="flex items-center gap-2 bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-md border border-gray-500"
+        >
+          🏠 Ana Menü
         </Link>
       </div>
 

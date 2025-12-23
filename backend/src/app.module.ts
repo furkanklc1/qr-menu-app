@@ -8,6 +8,7 @@ import { OrdersModule } from './orders/orders.module';
 import { CategoriesModule } from './categories/categories.module';
 import { TablesModule } from './tables/tables.module';
 import { AiModule } from './ai/ai.module';
+import { WaitersModule } from './waiters/waiters.module';
 
 import { PrismaService } from './prisma.service';
 import { EventsGateway } from './events/events.gateway';
@@ -28,6 +29,7 @@ import { EventsGateway } from './events/events.gateway';
     CategoriesModule,
     TablesModule,
     AiModule,
+    WaitersModule,
   ],
   controllers: [],
   providers: [PrismaService, EventsGateway],

@@ -45,6 +45,17 @@ export default function AdminHub() {
                 </div>
             </Link>
 
+            {/* Garson Yönetimi */}
+            <Link href="/admin/waiter" className="group">
+                <div className="bg-gray-800 hover:bg-gray-750 border-2 border-gray-700 hover:border-yellow-500 p-8 rounded-2xl transition-all duration-300 transform hover:-translate-y-1 shadow-xl flex items-center gap-6 cursor-pointer">
+                    <div className="text-5xl bg-gray-700 p-4 rounded-full group-hover:bg-yellow-500 transition-colors">🏃</div>
+                    <div>
+                        <h2 className="text-2xl font-bold text-white mb-1 group-hover:text-yellow-300">Garson Yönetimi</h2>
+                        <p className="text-gray-400 text-sm">Garsonları ve görevlerini yönet.</p>
+                    </div>
+                </div>
+            </Link>
+
             {/* Menü Yönetimi */}
             <Link href="/admin/products" className="group">
                 <div className="bg-gray-800 hover:bg-gray-750 border-2 border-gray-700 hover:border-blue-500 p-8 rounded-2xl transition-all duration-300 transform hover:-translate-y-1 shadow-xl flex items-center gap-6 cursor-pointer">

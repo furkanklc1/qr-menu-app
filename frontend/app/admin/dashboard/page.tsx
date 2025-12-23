@@ -125,7 +125,7 @@ export default function DashboardPage() {
             </div>
 
             <Link href="/admin/home" className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-white transition-colors border border-gray-600 flex items-center gap-2 text-sm font-bold ml-auto md:ml-0">
-               🏠 Menü
+               🏠 Ana Menü
             </Link>
         </div>
       </div>

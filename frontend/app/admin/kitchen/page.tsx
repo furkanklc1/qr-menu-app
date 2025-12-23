@@ -105,8 +105,11 @@ export default function AdminPage() {
         </div>
         
         <div className="flex gap-3 items-center flex-wrap justify-center">
-            <Link href="/admin/home" className="flex items-center gap-2 bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-md border border-gray-500">
-                🏠 Ana Menü
+            <Link
+              href="/admin/home"
+              className="flex items-center gap-2 bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-md border border-gray-500"
+            >
+              🏠 Ana Menü
             </Link>
             <Link href="/admin/products" className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-md border border-gray-600">
                 🍔 Menü Yönetimi
