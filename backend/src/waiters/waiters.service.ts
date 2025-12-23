@@ -6,7 +6,7 @@ export class WaitersService {
   constructor(private prisma: PrismaService) {}
 
   async findAll() {
-    const waiters = await this.prisma.waiter.findMany({
+    const waiters = await (this.prisma as any).waiter.findMany({
       include: {
         orders: {
           where: { status: { not: 'SERVED' } },
@@ -17,14 +17,14 @@ export class WaitersService {
 
     // Eğer hiç garson yoksa varsayılan garsonları oluştur
     if (waiters.length === 0) {
-      await this.prisma.waiter.createMany({
+      await (this.prisma as any).waiter.createMany({
         data: [
           { name: 'Garson 1', status: 'AVAILABLE' },
           { name: 'Garson 2', status: 'AVAILABLE' },
           { name: 'Garson 3', status: 'AVAILABLE' },
         ],
       });
-      return this.prisma.waiter.findMany({
+      return (this.prisma as any).waiter.findMany({
         include: {
           orders: {
             where: { status: { not: 'SERVED' } },
@@ -38,7 +38,7 @@ export class WaitersService {
   }
 
   async findOne(id: number) {
-    return this.prisma.waiter.findUnique({
+    return (this.prisma as any).waiter.findUnique({
       where: { id },
       include: {
         orders: {
@@ -49,13 +49,13 @@ export class WaitersService {
   }
 
   async create(name: string) {
-    return this.prisma.waiter.create({
+    return (this.prisma as any).waiter.create({
       data: { name },
     });
   }
 
   async updateStatus(id: number, status: 'AVAILABLE' | 'BUSY' | 'ON_BREAK') {
-    return this.prisma.waiter.update({
+    return (this.prisma as any).waiter.update({
       where: { id },
       data: { status },
     });
@@ -77,10 +77,10 @@ export class WaitersService {
 
     const orders = await this.prisma.order.findMany({
       where: {
-        waiterId,
+        waiterId: waiterId,
         status: 'SERVED',
         servedAt: { gte: startDate },
-      },
+      } as any,
       include: {
         table: true,
       },
@@ -91,10 +91,10 @@ export class WaitersService {
 
     // Ortalama servis süresi hesapla
     const serviceTimes = orders
-      .filter((o) => o.readyAt && o.servedAt)
-      .map((o) => {
-        const ready = new Date(o.readyAt!).getTime();
-        const served = new Date(o.servedAt!).getTime();
+      .filter((o: any) => o.readyAt && o.servedAt)
+      .map((o: any) => {
+        const ready = new Date(o.readyAt).getTime();
+        const served = new Date(o.servedAt).getTime();
         return (served - ready) / 1000 / 60; // dakika cinsinden
       });
 

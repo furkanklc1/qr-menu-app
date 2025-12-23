@@ -42,6 +42,13 @@ export default function Home() {
           fetch("http://localhost:3000/categories"),
         ]);
 
+        if (!prodRes.ok) {
+          throw new Error(`Products fetch failed: ${prodRes.status} ${prodRes.statusText}`);
+        }
+        if (!catRes.ok) {
+          throw new Error(`Categories fetch failed: ${catRes.status} ${catRes.statusText}`);
+        }
+
         const prodData = await prodRes.json();
         const catData = await catRes.json();
 
@@ -49,6 +56,9 @@ export default function Home() {
         setCategories(catData);
       } catch (error) {
         console.error("Veri çekme hatası:", error);
+        // Hata durumunda boş array'ler set et ki uygulama çökmesin
+        setProducts([]);
+        setCategories([]);
       } finally {
         setLoading(false);
       }

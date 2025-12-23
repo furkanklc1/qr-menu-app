@@ -14,8 +14,8 @@ export default async function AdminProductsPage() {
   return (
     <div className="min-h-screen bg-gray-900 p-8 text-white">
       {/* Üst Bar ve Navigasyon */}
-      <div className="flex justify-between items-center mb-8 border-b border-gray-700 pb-4">
-        <h1 className="text-3xl font-bold text-orange-500">
+      <div className="flex justify-between items-center mb-8 border-b border-gray-700 pb-6">
+        <h1 className="text-3xl font-bold text-blue-400">
           🍔 Menü Yönetimi
         </h1>
         <Link

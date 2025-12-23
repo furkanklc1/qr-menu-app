@@ -35,6 +35,7 @@ model Product {
   price       Decimal  @db.Decimal(10, 2)
   image       String?
   isAvailable Boolean  @default(true)
+  stock       Int      @default(0)  // Stok miktarı
   
   categoryId  Int
   category    Category @relation(fields: [categoryId], references: [id])

@@ -101,7 +101,7 @@ export default function DashboardPage() {
       {/* ÜST BAR */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-gray-700 pb-6 gap-4">
         <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-orange-500 flex items-center gap-2">
+            <h1 className="text-2xl md:text-3xl font-bold text-green-400 flex items-center gap-2">
               📊 İstatistik Paneli
             </h1>
             <p className="text-gray-400 text-sm mt-1">
@@ -124,7 +124,7 @@ export default function DashboardPage() {
                 ))}
             </div>
 
-            <Link href="/admin/home" className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-white transition-colors border border-gray-600 flex items-center gap-2 text-sm font-bold ml-auto md:ml-0">
+            <Link href="/admin/home" className="flex items-center gap-2 bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-md border border-gray-500">
                🏠 Ana Menü
             </Link>
         </div>

@@ -45,10 +45,25 @@ export default function AdminPage() {
   useEffect(() => {
     // 1. REST API ile mevcut siparişleri çek
     fetch("http://localhost:3000/orders")
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
+      })
       .then((data) => {
-        const activeOrders = data.filter((o: Order) => o.status !== "SERVED");
-        setOrders(activeOrders);
+        // Verinin array olduğundan emin ol
+        if (Array.isArray(data)) {
+          const activeOrders = data.filter((o: Order) => o.status !== "SERVED");
+          setOrders(activeOrders);
+        } else {
+          console.error("Backend'den array gelmedi:", data);
+          setOrders([]);
+        }
+      })
+      .catch((error) => {
+        console.error("Siparişler yüklenirken hata:", error);
+        setOrders([]);
       });
 
     // 2. Socket Bağlantısı
