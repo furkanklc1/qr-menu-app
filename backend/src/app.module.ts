@@ -1,6 +1,8 @@
+// backend/src/app.module.ts
+
 import { Module } from '@nestjs/common';
 import { ServeStaticModule } from '@nestjs/serve-static';
-import { ConfigModule } from '@nestjs/config'; // 
+import { ConfigModule } from '@nestjs/config'; 
 import { APP_GUARD } from '@nestjs/core';
 import { join } from 'path';
 
@@ -22,8 +24,9 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
       isGlobal: true, 
     }),
 
+    // Uploads klasörünü dışarıya açar: http://localhost:3000/uploads/resim.jpg
     ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'uploads'),
+      rootPath: join(process.cwd(), 'uploads'), // __dirname yerine process.cwd() daha güvenilirdir (Proje kök dizini)
       serveRoot: '/uploads',
     }),
 
@@ -39,6 +42,8 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
   providers: [
     PrismaService, 
     EventsGateway,
+    // DİKKAT: Bu guard tüm route'ları korur. 
+    // Müşterilerin erişeceği route'lara controller içinde @Public() eklemeyi UNUTMA!
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,

@@ -8,6 +8,8 @@ import CallWaiterButton from "../components/CallWaiterButton";
 import OrderTracker from "../components/OrderTracker"; 
 import { useCartStore } from "../store/useCartStore"; 
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+
 interface Category {
   id: number;
   name: string;
@@ -33,91 +35,60 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState(""); 
   const [loading, setLoading] = useState(true);
   const [connectionError, setConnectionError] = useState(false);
+  
+  // --- YENİ STATE: Popüler ürünlerin açık/kapalı durumu ---
+  // Başlangıçta kapalı geliyor, tıklayınca açılıyor
+  const [showPopular, setShowPopular] = useState(false); 
 
   const { orderId, setOrderId } = useCartStore(); 
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Backend bağlantısını test et
         const [prodRes, catRes] = await Promise.all([
-          fetch("http://localhost:3000/products", {
+          fetch(`${API_BASE_URL}/products`, {
             method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
           }).catch((err) => {
             console.error("Products fetch network error:", err);
-            throw new Error("Backend sunucusuna bağlanılamıyor. Backend'in çalıştığından emin olun.");
+            throw new Error("Backend sunucusuna bağlanılamıyor.");
           }),
-          fetch("http://localhost:3000/categories", {
+          fetch(`${API_BASE_URL}/categories`, {
             method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
           }).catch((err) => {
             console.error("Categories fetch network error:", err);
-            throw new Error("Backend sunucusuna bağlanılamıyor. Backend'in çalıştığından emin olun.");
+            throw new Error("Backend sunucusuna bağlanılamıyor.");
           }),
         ]);
 
-        if (!prodRes.ok) {
-          const errorText = await prodRes.text();
-          throw new Error(`Products fetch failed: ${prodRes.status} ${prodRes.statusText} - ${errorText}`);
-        }
-        if (!catRes.ok) {
-          const errorText = await catRes.text();
-          throw new Error(`Categories fetch failed: ${catRes.status} ${catRes.statusText} - ${errorText}`);
-        }
+        if (!prodRes.ok) throw new Error("Products fetch failed");
+        if (!catRes.ok) throw new Error("Categories fetch failed");
 
         const prodData = await prodRes.json();
         const catData = await catRes.json();
 
-        // Verinin array olduğundan emin ol
-        if (Array.isArray(prodData)) {
-          setProducts(prodData);
-        } else {
-          console.error("Products data is not an array:", prodData);
-          setProducts([]);
-        }
+        setProducts(Array.isArray(prodData) ? prodData : []);
+        setCategories(Array.isArray(catData) ? catData : []);
 
-        if (Array.isArray(catData)) {
-          setCategories(catData);
-        } else {
-          console.error("Categories data is not an array:", catData);
-          setCategories([]);
-        }
-
-        // Popular ürünleri ayrı bir try-catch ile çek (hata olsa bile uygulama çalışsın)
         try {
-          const popularRes = await fetch("http://localhost:3000/products/popular?limit=6", {
+          const popularRes = await fetch(`${API_BASE_URL}/products/popular?limit=6`, {
             method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
           });
           if (popularRes.ok) {
             const popularData = await popularRes.json();
             setPopularProducts(Array.isArray(popularData) ? popularData : []);
           } else {
-            console.warn("Popular products endpoint returned error:", popularRes.status);
             setPopularProducts([]);
           }
         } catch (popularError) {
-          console.warn("Popular products fetch failed, continuing without them:", popularError);
+          console.warn("Popular products fetch failed", popularError);
           setPopularProducts([]);
         }
       } catch (error) {
         console.error("Veri çekme hatası:", error);
-        const errorMessage = error instanceof Error ? error.message : "Bilinmeyen hata";
-        console.error("Hata detayı:", errorMessage);
-        
-        // Backend bağlantı hatası kontrolü
-        if (error instanceof TypeError || errorMessage.includes("Failed to fetch") || errorMessage.includes("bağlanılamıyor")) {
-          setConnectionError(true);
-        }
-        
-        // Hata durumunda boş array'ler set et ki uygulama çökmesin
+        setConnectionError(true);
         setProducts([]);
         setCategories([]);
         setPopularProducts([]);
@@ -142,34 +113,18 @@ export default function Home() {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-orange-600 font-bold animate-pulse">Menü Yükleniyor...</div>;
 
-  // Backend bağlantı hatası durumu
   if (connectionError) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
         <div className="bg-white rounded-2xl shadow-xl border border-red-200 p-8 max-w-md w-full text-center">
           <div className="text-6xl mb-4">⚠️</div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Backend Bağlantı Hatası</h1>
-          <p className="text-gray-600 mb-6">
-            Backend sunucusuna bağlanılamıyor. Lütfen backend sunucusunun çalıştığından emin olun.
-          </p>
-          <div className="bg-gray-100 rounded-lg p-4 mb-6 text-left">
-            <p className="text-sm font-bold text-gray-700 mb-2">Yapılacaklar:</p>
-            <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
-              <li>Backend terminalini açın</li>
-              <li><code className="bg-gray-200 px-2 py-0.5 rounded">cd backend</code> komutunu çalıştırın</li>
-              <li><code className="bg-gray-200 px-2 py-0.5 rounded">npm run start:dev</code> komutunu çalıştırın</li>
-              <li>Backend'in <code className="bg-gray-200 px-2 py-0.5 rounded">http://localhost:3000</code> adresinde çalıştığını kontrol edin</li>
-            </ol>
-          </div>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">Bağlantı Hatası</h1>
+          <p className="text-gray-600 mb-6">Sunucuya ulaşılamıyor. Lütfen tekrar deneyin.</p>
           <button 
-            onClick={() => {
-              setConnectionError(false);
-              setLoading(true);
-              window.location.reload();
-            }}
+            onClick={() => window.location.reload()}
             className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
           >
-            🔄 Tekrar Dene
+            🔄 Yenile
           </button>
         </div>
       </div>
@@ -188,7 +143,6 @@ export default function Home() {
         }}
       />
 
-      {/* --- SİPARİŞ TAKİP EKRANI --- */}
       {orderId && (
         <OrderTracker 
             orderId={orderId} 
@@ -196,26 +150,24 @@ export default function Home() {
         />
       )}
       
+      {/* --- HEADER ALANI --- */}
       <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl shadow-sm border-b border-gray-100 transition-all duration-300">
         <div className="pt-4 pb-2 px-4">
             <div className="flex flex-col items-center mb-4">
                 <h1 className="text-2xl font-extrabold text-gray-800 tracking-tight flex items-center gap-2">
                   <span className=" text-orange-600 p-1.5 rounded-lg">🍴</span>
-                  QR MENÜ 🥣
+                  QR MENÜ
                 </h1>
             </div>
 
-            {/* ARAMA ÇUBUĞU (Mobilde daha geniş: w-full eklendi) */}
             <div className="w-full max-w-lg mx-auto relative group">
                 <input 
                     type="text" 
-                    placeholder="Arama (Örn: Adana Kebap)" 
+                    placeholder="Lezzet ara..." 
                     value={searchTerm}
                     onChange={(e) => {
                         setSearchTerm(e.target.value);
-                        if (e.target.value.length > 0) {
-                            setSelectedCategoryId(0);
-                        }
+                        if (e.target.value.length > 0) setSelectedCategoryId(0);
                     }}
                     className="w-full bg-gray-100 hover:bg-gray-200 focus:bg-white text-gray-800 rounded-2xl py-3 pl-11 pr-4 outline-none focus:ring-2 focus:ring-orange-500/50 transition-all border border-transparent focus:border-orange-200 placeholder-gray-400 text-sm font-medium"
                 />
@@ -266,25 +218,62 @@ export default function Home() {
         </div>
       </div>
 
-      {/* --- EN ÇOK TERCİH EDİLENLER BÖLÜMÜ --- */}
+      {/* --- EN ÇOK SİPARİŞ EDİLENLER BÖLÜMÜ (ACCORDION STYLE) --- */}
       {popularProducts.length > 0 && selectedCategoryId === 0 && !searchTerm && (
-        <div className="px-3 py-6 container mx-auto max-w-6xl mt-4">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">🔥</span>
-              <h2 className="text-xl font-bold text-gray-800">En Çok Tercih Edilenler</h2>
+        <div className="container mx-auto max-w-6xl mt-6 px-4">
+            
+            {/* Tıklanabilir Wrapper */}
+            <div 
+                onClick={() => setShowPopular(!showPopular)} // Tıklama Olayı
+                className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-orange-600 to-red-600 shadow-2xl shadow-orange-500/30 transform transition-all cursor-pointer group"
+            >
+                
+                {/* Dekoratif Arka Plan Daireleri */}
+                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-black/10 rounded-full blur-2xl pointer-events-none"></div>
+
+                {/* Başlık Alanı (Her zaman görünür) */}
+                <div className="flex items-center justify-between p-6 md:p-8 relative z-10">
+                    <div className="flex items-center gap-4">
+                        <div className="bg-white/20 backdrop-blur-md p-3 rounded-2xl shadow-inner border border-white/10 text-3xl animate-bounce-slow">
+                            🏆
+                        </div>
+                        <div className="flex flex-col">
+                            <h2 className="text-xl md:text-3xl font-black text-white tracking-tight drop-shadow-sm group-hover:scale-105 transition-transform origin-left">
+                                Günün Yıldızları
+                            </h2>
+                            <span className="text-xs md:text-base font-medium text-orange-100 uppercase tracking-widest opacity-90">
+                                En Çok Sipariş Edilenler
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Dönen Ok İkonu */}
+                    <div className={`bg-white/20 p-2 rounded-full transition-transform duration-300 ${showPopular ? 'rotate-180' : 'rotate-0'}`}>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-6 h-6 text-white">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                        </svg>
+                    </div>
+                </div>
+
+                {/* Ürünler Grid'i (Sadece showPopular true ise görünür) */}
+                {showPopular && (
+                    <div className="px-6 pb-6 md:px-8 md:pb-8 relative z-10 animate-fade-in-down">
+                        <div className="w-full h-px bg-white/20 mb-6"></div> {/* Ayırıcı Çizgi */}
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
+                            {popularProducts.map((product) => (
+                                // Popüler ürün kartlarında beyaz font sorunu olmaması için ProductCard'ı burada özel style ile kullanabilirsin
+                                // veya standart kartı kullanırsın. Standart kart beyaz arka plana sahip olduğu için sorun olmaz.
+                                <ProductCard key={product.id} product={product} />
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
-            <div className="flex-1 h-px bg-gradient-to-r from-orange-200 to-transparent"></div>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
-            {popularProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
         </div>
       )}
 
-      {/* --- YENİ GRİD SİSTEMİ (Mobil: 2'li, Tablet: 3'lü, Masaüstü: 4'lü) --- */}
+      {/* --- NORMAL ÜRÜN LİSTESİ --- */}
       <div className="px-3 py-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6 container mx-auto z-0 max-w-6xl mt-2">
         {filteredProducts.length > 0 ? (
             filteredProducts.map((product) => (
@@ -299,21 +288,14 @@ export default function Home() {
                 <div className="bg-white p-6 rounded-full shadow-sm mb-4 border border-gray-100">
                    <span className="text-4xl grayscale opacity-50">⚠️</span>
                 </div>
-                <p className="text-lg font-medium text-gray-500">Menü yüklenemedi.</p>
-                <p className="text-sm text-gray-400 mt-2">Backend sunucusunun çalıştığından emin olun.</p>
-                <button 
-                    onClick={() => window.location.reload()}
-                    className="mt-4 text-orange-600 font-bold hover:underline bg-orange-50 px-5 py-2.5 rounded-xl transition-colors hover:bg-orange-100"
-                >
-                    Sayfayı Yenile
-                </button>
+                <p className="text-lg font-medium text-gray-500">Menü boş.</p>
             </div>
         ) : (
             <div className="col-span-full text-center py-20 flex flex-col items-center justify-center text-gray-400">
                 <div className="bg-white p-6 rounded-full shadow-sm mb-4 border border-gray-100">
                    <span className="text-4xl grayscale opacity-50">🍽️</span>
                 </div>
-                <p className="text-lg font-medium text-gray-500">Aradığınız lezzeti bulamadık.</p>
+                <p className="text-lg font-medium text-gray-500">Aradığınız ürün bulunamadı.</p>
                 <button 
                     onClick={() => {setSearchTerm(""); setSelectedCategoryId(0)}}
                     className="mt-4 text-orange-600 font-bold hover:underline bg-orange-50 px-5 py-2.5 rounded-xl transition-colors hover:bg-orange-100"

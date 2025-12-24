@@ -3,6 +3,8 @@
 import { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import Cookies from "js-cookie";
 import toast, { Toaster } from "react-hot-toast";
 import { api } from "../../../lib/api";
 
@@ -39,7 +41,9 @@ export default function WaiterPage() {
   const [waiters, setWaiters] = useState<Waiter[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('oldest');
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const assigningWaiterRef = useRef<Set<number>>(new Set());
+  const router = useRouter();
   // Ses çalma fonksiyonu (sabit, ayar yok)
   const playSound = () => {
     try {
@@ -49,6 +53,15 @@ export default function WaiterPage() {
     } catch (e) {
       console.error("Ses hatası");
     }
+  };
+
+  const handleLogout = () => {
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = () => {
+    Cookies.remove("admin_token");
+    router.push("/admin");
   };
 
   // Siparişleri sırala
@@ -255,6 +268,12 @@ export default function WaiterPage() {
             >
               🏠 Ana Menü
             </Link>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-md"
+            >
+              🚪 Çıkış Yap
+            </button>
           </div>
         </header>
 
@@ -415,6 +434,36 @@ export default function WaiterPage() {
           </section>
         </div>
       </div>
+
+      {/* Logout Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-md overflow-hidden animate-in fade-in zoom-in">
+            <div className="p-6">
+              <h3 className="text-xl font-bold text-white mb-4 text-center">
+                Çıkış Yap
+              </h3>
+              <p className="text-gray-300 text-center mb-6">
+                Çıkış yapmak istediğinize emin misiniz?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowLogoutModal(false)}
+                  className="flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold transition-colors"
+                >
+                  İptal
+                </button>
+                <button
+                  onClick={confirmLogout}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg font-semibold transition-colors"
+                >
+                  Tamam
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import Cookies from "js-cookie";
 import toast, { Toaster } from "react-hot-toast";
 import { api } from "../../../lib/api";
 
@@ -23,6 +25,8 @@ export default function StockPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editStock, setEditStock] = useState<number>(0);
   const [editMinStock, setEditMinStock] = useState<number>(5);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     fetchProducts();
@@ -79,6 +83,15 @@ export default function StockPage() {
     setEditingId(null);
   };
 
+  const handleLogout = () => {
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = () => {
+    Cookies.remove("admin_token");
+    router.push("/admin");
+  };
+
   const getStockStatus = (stock: number, minStock: number) => {
     if (stock === 0) return { text: "Tükendi", color: "text-red-400 bg-red-900/20 border-red-800" };
     if (stock <= minStock) return { text: "Düşük Stok", color: "text-yellow-400 bg-yellow-900/20 border-yellow-800" };
@@ -110,12 +123,20 @@ export default function StockPage() {
             Ürün stoklarını takip edin ve düşük stoklu ürünleri görüntüleyin.
           </p>
         </div>
-        <Link
-          href="/admin/home"
-          className="flex items-center gap-2 bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-md border border-gray-500"
-        >
-          🏠 Ana Menü
-        </Link>
+        <div className="flex gap-3 items-center">
+          <Link
+            href="/admin/home"
+            className="flex items-center gap-2 bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-md border border-gray-500"
+          >
+            🏠 Ana Menü
+          </Link>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-md"
+          >
+            🚪 Çıkış Yap
+          </button>
+        </div>
       </div>
 
       {/* Filtreler ve İstatistikler */}
@@ -249,6 +270,36 @@ export default function StockPage() {
         <div className="text-center py-12 text-gray-500">
           <p className="text-xl mb-2">Henüz ürün bulunmuyor</p>
           <p className="text-sm">Menü yönetiminden ürün ekleyebilirsiniz.</p>
+        </div>
+      )}
+
+      {/* Logout Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-md overflow-hidden animate-in fade-in zoom-in">
+            <div className="p-6">
+              <h3 className="text-xl font-bold text-white mb-4 text-center">
+                Çıkış Yap
+              </h3>
+              <p className="text-gray-300 text-center mb-6">
+                Çıkış yapmak istediğinize emin misiniz?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowLogoutModal(false)}
+                  className="flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold transition-colors"
+                >
+                  İptal
+                </button>
+                <button
+                  onClick={confirmLogout}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg font-semibold transition-colors"
+                >
+                  Tamam
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

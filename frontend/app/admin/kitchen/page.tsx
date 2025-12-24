@@ -22,6 +22,7 @@ interface Order {
 export default function AdminPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const router = useRouter();
 
   // --- SES ÇALMA FONKSİYONU ---
@@ -37,10 +38,12 @@ export default function AdminPage() {
   };
 
   const handleLogout = () => {
-    if (confirm("Çıkış yapmak istiyor musunuz?")) {
-      Cookies.remove("admin_token"); 
-      router.push("/admin"); 
-    }
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = () => {
+    Cookies.remove("admin_token"); 
+    router.push("/admin"); 
   };
 
   useEffect(() => {
@@ -149,6 +152,36 @@ export default function AdminPage() {
           </div>
         )}
       </div>
+
+      {/* Logout Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-md overflow-hidden animate-in fade-in zoom-in">
+            <div className="p-6">
+              <h3 className="text-xl font-bold text-white mb-4 text-center">
+                Çıkış Yap
+              </h3>
+              <p className="text-gray-300 text-center mb-6">
+                Çıkış yapmak istediğinize emin misiniz?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowLogoutModal(false)}
+                  className="flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold transition-colors"
+                >
+                  İptal
+                </button>
+                <button
+                  onClick={confirmLogout}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg font-semibold transition-colors"
+                >
+                  Tamam
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

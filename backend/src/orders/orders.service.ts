@@ -11,27 +11,47 @@ export class OrdersService {
   ) {}
 
   async create(createOrderDto: CreateOrderDto) {
+    // 1. Toplam tutarı hesapla
     const totalAmount = createOrderDto.items.reduce(
       (sum, item) => sum + item.price * item.quantity,
       0,
     );
 
-    const newOrder = await this.prisma.order.create({
-      data: {
-        tableId: createOrderDto.tableId,
-        totalAmount: totalAmount,
-        status: 'PENDING',
-        items: {
-          create: createOrderDto.items.map((item) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            price: item.price,
-          })),
+    // 2. Transaction Başlat: Hem siparişi oluştur hem stoğu düş
+    // Eğer stok düşerken hata olursa (örn: stok yetersizse), sipariş de oluşmaz.
+    const newOrder = await this.prisma.$transaction(async (tx) => {
+      
+      // A) Siparişi Kaydet
+      const order = await tx.order.create({
+        data: {
+          tableId: createOrderDto.tableId,
+          totalAmount: totalAmount,
+          status: 'PENDING',
+          items: {
+            create: createOrderDto.items.map((item) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              price: item.price,
+            })),
+          },
         },
-      },
-      include: { table: true, items: { include: { product: true } } }, 
+        include: { table: true, items: { include: { product: true } } }, 
+      });
+
+      // B) Stokları Düş (Kritik Ekleme)
+      for (const item of createOrderDto.items) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: {
+            stock: { decrement: item.quantity } // Eski stoktan adedi düş
+          }
+        });
+      }
+
+      return order;
     });
 
+    // 3. Socket bildirimi gönder
     this.eventsGateway.server.emit('new_order', newOrder);
     return newOrder;
   }
