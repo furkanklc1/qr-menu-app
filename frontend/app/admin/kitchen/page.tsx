@@ -89,21 +89,6 @@ export default function AdminPage() {
       }
     });
 
-    // --- GARSON ÇAĞRISI GELDİĞİNDE ---
-    socket.on("waiter_called", (data: { tableId: number, time: string }) => {
-      toast.error(
-        (t) => (
-          <div className="flex flex-col items-start">
-            <span className="font-bold text-lg">🔔 GARSON ÇAĞRISI!</span>
-            <span>Masa {data.tableId} yardım istiyor.</span>
-            <button onClick={() => toast.dismiss(t.id)} className="mt-2 text-xs border border-white px-2 py-1 rounded">Tamam</button>
-          </div>
-        ),
-        { duration: 10000, position: "top-right", style: { background: '#EF4444', color: '#fff' } }
-      );
-      playSound(); // <--- SESİ ÇAL 🔔
-    });
-
     return () => { socket.disconnect(); };
   }, []);
 
