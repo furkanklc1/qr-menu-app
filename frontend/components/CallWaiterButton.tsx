@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useCartStore } from "../store/useCartStore";
+import { api } from "../lib/api";
 
 export default function CallWaiterButton() {
   const [loading, setLoading] = useState(false);
@@ -22,13 +23,10 @@ export default function CallWaiterButton() {
   };
 
   const confirmCall = async () => {
-    setLoading(true); // BU KALDI (Anti-spam için)
+    setLoading(true);
     try {
-      await fetch("http://localhost:3000/orders/call-waiter", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tableId }),
-      });
+      const res = await api.post("/orders/call-waiter", { tableId });
+      if (!res.ok) throw new Error("Çağrı gönderilemedi");
       
       setShowCallModal(false);
       setStatusMessage(`Talebiniz alındı! Garsonumuz kısa bir süre içinde yanınızda olacak.`);

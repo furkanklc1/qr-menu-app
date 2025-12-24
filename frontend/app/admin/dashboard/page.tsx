@@ -6,6 +6,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, 
   AreaChart, Area, CartesianGrid 
 } from "recharts";
+import { api } from "../../../lib/api";
 
 // Özel Tooltip Bileşeni
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -46,39 +47,50 @@ export default function DashboardPage() {
   const [authPassword, setAuthPassword] = useState("");
   const [authError, setAuthError] = useState("");
 
-  const fetchStats = (selectedRange: string) => {
+  const fetchStats = async (selectedRange: string) => {
     setLoading(true);
     setRange(selectedRange);
-    fetch(`http://localhost:3000/orders/stats?range=${selectedRange}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setStats(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error(err);
-        setLoading(false);
-      });
+    try {
+      const res = await api.get(`/orders/stats?range=${selectedRange}`);
+      if (!res.ok) throw new Error('İstatistikler yüklenemedi');
+      const data = await res.json();
+      setStats(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     fetchStats("daily");
   }, []);
 
-  const handleAuthCheck = (e: React.FormEvent) => {
+  const handleAuthCheck = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (authUsername === "admin" && authPassword === "boss123") {
-        setShowAuthModal(false);
-        setShowConfirmModal(true);
-        setAuthError(""); 
-    } else {
-        setAuthError("❌ Hatalı kullanıcı adı veya şifre!");
+    try {
+      const res = await api.post("/auth/login", {
+        username: authUsername,
+        password: authPassword,
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Hatalı kullanıcı adı veya şifre!");
+      }
+      
+      setShowAuthModal(false);
+      setShowConfirmModal(true);
+      setAuthError("");
+    } catch (err: any) {
+      setAuthError(err.message || "❌ Hatalı kullanıcı adı veya şifre!");
     }
   };
 
   const handleFinalReset = async () => {
     try {
-      await fetch("http://localhost:3000/orders/reset", { method: "DELETE" });
+      const res = await api.delete("/orders/reset");
+      if (!res.ok) throw new Error("Sıfırlama başarısız");
       setShowConfirmModal(false);
       setShowSuccessModal(true); 
     } catch (error) {

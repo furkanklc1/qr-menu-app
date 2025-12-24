@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
+import { api } from "../lib/api";
 
 interface OrderTrackerProps {
   orderId: number;
@@ -19,7 +20,7 @@ export default function OrderTracker({ orderId, onClose }: OrderTrackerProps) {
     // 1. ADIM: Sayfa yenilendiğinde güncel durumu Backend'den çek!
     const fetchLatestStatus = async () => {
       try {
-        const res = await fetch(`http://localhost:3000/orders/${orderId}`);
+        const res = await api.get(`/orders/${orderId}`);
         if (res.ok) {
           const data = await res.json();
           // Backend'den gelen gerçek durumu ayarla

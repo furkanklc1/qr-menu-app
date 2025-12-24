@@ -3,22 +3,41 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
+import { api } from "../../lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+    setLoading(true);
 
-    // Şifre
-    if (username === "admin" && password === "boss123") {
-      Cookies.set("admin_token", "super-secret-key", { expires: 1 });
-      router.push("/admin/home"); 
-    } else {
-      setError("❌ Hatalı kullanıcı adı veya şifre!");
+    try {
+      const response = await api.post("/auth/login", {
+        username,
+        password,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Giriş başarısız");
+      }
+
+      const data = await response.json();
+      
+      // JWT token'ı cookie'ye kaydet
+      Cookies.set("admin_token", data.access_token, { expires: 1 });
+      
+      router.push("/admin/home");
+    } catch (err: any) {
+      setError(err.message || "❌ Hatalı kullanıcı adı veya şifre!");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -36,7 +55,13 @@ export default function LoginPage() {
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded p-3 text-white outline-none focus:border-orange-500" placeholder="*******" />
           </div>
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-          <button type="submit" className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded transition-colors">Giriş Yap</button>
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="w-full bg-orange-600 hover:bg-orange-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 rounded transition-colors"
+          >
+            {loading ? "Giriş yapılıyor..." : "Giriş Yap"}
+          </button>
         </form>
       </div>
     </div>

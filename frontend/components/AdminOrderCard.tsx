@@ -1,7 +1,8 @@
-"use client"; // <--- Bu satır, tıklama özelliği için şart!
+"use client";
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { api } from "../lib/api";
 
 export default function AdminOrderCard({ order }: { order: any }) {
   const router = useRouter();
@@ -11,16 +12,9 @@ export default function AdminOrderCard({ order }: { order: any }) {
   const handleStatusUpdate = async (newStatus: string) => {
     setLoading(true);
     try {
-      // 1. Backend'e haber ver (PATCH isteği)
-      await fetch(`http://localhost:3000/orders/${order.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      // 2. Sayfayı yenile (Veriler güncellensin diye)
+      const res = await api.patch(`/orders/${order.id}`, { status: newStatus });
+      if (!res.ok) throw new Error("Güncelleme başarısız");
       router.refresh();
-      
     } catch (error) {
       alert("Hata oluştu!");
     } finally {

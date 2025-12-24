@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { toast, Toaster } from "react-hot-toast"; // <--- 1. Kütüphaneyi ekledik
+import { toast, Toaster } from "react-hot-toast";
+import { api } from "../lib/api";
 
 interface Category {
   id: number;
@@ -18,17 +19,24 @@ export default function AddProductForm() {
     description: "",
     price: "",
     categoryId: 0,
+    trackStock: false,
   });
   
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetch("http://localhost:3000/categories")
-      .then((res) => res.json())
-      .then((data) => {
+    const fetchCategories = async () => {
+      try {
+        const res = await api.get("/categories");
+        if (!res.ok) throw new Error("Kategoriler yüklenemedi");
+        const data = await res.json();
         setCategories(data);
-      });
+      } catch (error) {
+        console.error("Kategoriler yüklenirken hata:", error);
+      }
+    };
+    fetchCategories();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,22 +55,21 @@ export default function AddProductForm() {
       data.append("description", formData.description);
       data.append("price", formData.price.toString());
       data.append("categoryId", formData.categoryId.toString());
+      data.append("trackStock", formData.trackStock.toString());
       if (file) {
         data.append("file", file);
       }
 
-      const response = await fetch("http://localhost:3000/products", {
-        method: "POST",
-        body: data,
-      });
+      const response = await api.postFormData("/products", data);
 
       if (response.ok) {
-        toast.success("✅ Ürün Başarıyla Eklendi!"); // <--- 3. Başarılı bildirimi
-        setFormData({ name: "", description: "", price: "", categoryId: 0 });
+        toast.success("✅ Ürün Başarıyla Eklendi!");
+        setFormData({ name: "", description: "", price: "", categoryId: 0, trackStock: false });
         setFile(null);
         router.refresh();
       } else {
-        toast.error("❌ Hata oluştu."); // <--- 4. Hata bildirimi
+        const errorData = await response.json().catch(() => ({}));
+        toast.error(errorData.message || "❌ Hata oluştu.");
       }
     } catch (error) {
       toast.error("Sunucu hatası."); // <--- 5. Sunucu hatası bildirimi
@@ -146,6 +153,20 @@ export default function AddProductForm() {
                     </div>
                 </div>
             </div>
+        </div>
+
+        {/* Stok Takibi */}
+        <div className="flex items-center gap-3 p-3 bg-gray-900 rounded-lg border border-gray-600">
+          <input 
+            type="checkbox" 
+            id="trackStock"
+            checked={formData.trackStock}
+            onChange={(e) => setFormData({...formData, trackStock: e.target.checked})}
+            className="w-5 h-5 text-orange-600 bg-gray-700 border-gray-600 rounded focus:ring-orange-500 cursor-pointer"
+          />
+          <label htmlFor="trackStock" className="text-sm text-gray-300 cursor-pointer">
+            📦 Stok takibi yap (Sadece stoklanabilir ürünler için)
+          </label>
         </div>
 
         {/* Dosya Yükleme */}

@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 import Link from "next/link";
 import toast, { Toaster } from "react-hot-toast";
+import { api } from "../../../lib/api";
 
 interface Order {
   id: number;
@@ -73,9 +74,11 @@ export default function WaiterPage() {
 
   useEffect(() => {
     // Garsonları çek (Backend otomatik oluşturuyor)
-    fetch("http://localhost:3000/waiters")
-      .then((res) => res.json())
-      .then((data) => {
+    const fetchWaiters = async () => {
+      try {
+        const res = await api.get("/waiters");
+        if (!res.ok) throw new Error("Garsonlar yüklenemedi");
+        const data = await res.json();
         if (data && data.length > 0) {
           setWaiters(data);
         } else {
@@ -86,25 +89,22 @@ export default function WaiterPage() {
             { id: 3, name: "Garson 3", status: "AVAILABLE" },
           ]);
         }
-      })
-      .catch(() => {
+      } catch {
         // Hata durumunda varsayılan garsonlar
         setWaiters([
           { id: 1, name: "Garson 1", status: "AVAILABLE" },
           { id: 2, name: "Garson 2", status: "AVAILABLE" },
           { id: 3, name: "Garson 3", status: "AVAILABLE" },
         ]);
-      });
+      }
+    };
 
     // Mevcut "Hazır" (READY) siparişleri çek
-    fetch("http://localhost:3000/orders")
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
-        return res.json();
-      })
-      .then((data) => {
+    const fetchOrders = async () => {
+      try {
+        const res = await api.get("/orders");
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data = await res.json();
         // Verinin array olduğundan emin ol
         if (Array.isArray(data)) {
           const ready = data.filter((o: Order) => o.status === "READY");
@@ -113,11 +113,14 @@ export default function WaiterPage() {
           console.error("Backend'den array gelmedi:", data);
           setReadyOrders([]);
         }
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error("Siparişler yüklenirken hata:", error);
         setReadyOrders([]);
-      });
+      }
+    };
+
+    fetchWaiters();
+    fetchOrders();
 
     const socket = io("http://localhost:3000");
 
@@ -175,11 +178,8 @@ export default function WaiterPage() {
 
   const markAsServed = async (orderId: number) => {
     try {
-      await fetch(`http://localhost:3000/orders/${orderId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "SERVED" }),
-      });
+      const res = await api.patch(`/orders/${orderId}`, { status: "SERVED" });
+      if (!res.ok) throw new Error("Güncelleme başarısız");
       setReadyOrders((prev) => prev.filter((o) => o.id !== orderId));
       toast.success("Servise çıkarma işlemi onaylandı.");
     } catch (error) {
@@ -193,11 +193,9 @@ export default function WaiterPage() {
       // Garson atama işlemi başladığını işaretle (ses çalmaması için)
       assigningWaiterRef.current.add(orderId);
       
-      await fetch(`http://localhost:3000/orders/${orderId}/assign-waiter`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ waiterId }),
-      });
+      const res = await api.patch(`/orders/${orderId}/assign-waiter`, { waiterId });
+      if (!res.ok) throw new Error("Garson atama başarısız");
+      
       setReadyOrders((prev) =>
         prev.map((o) =>
           o.id === orderId ? { ...o, waiter: waiters.find((w) => w.id === waiterId) } : o

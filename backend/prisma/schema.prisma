@@ -35,7 +35,9 @@ model Product {
   price       Decimal  @db.Decimal(10, 2)
   image       String?
   isAvailable Boolean  @default(true)
+  trackStock  Boolean  @default(false)  // Stok takibi yapılsın mı?
   stock       Int      @default(0)  // Stok miktarı
+  minStock    Int      @default(5)  // Minimum stok uyarı seviyesi
   
   categoryId  Int
   category    Category @relation(fields: [categoryId], references: [id])

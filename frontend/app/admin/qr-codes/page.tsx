@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import QRCode from "react-qr-code";
 import Link from "next/link";
+import { api } from "../../../lib/api";
 
 interface Table {
   id: number;
@@ -17,9 +18,18 @@ export default function QRCodesPage() {
   useEffect(() => {
     setIsMounted(true);
 
-    fetch("http://localhost:3000/tables")
-      .then((res) => res.json())
-      .then((data) => setTables(data));
+    const fetchTables = async () => {
+      try {
+        const res = await api.get("/tables");
+        if (!res.ok) throw new Error("Masalar yüklenemedi");
+        const data = await res.json();
+        setTables(data);
+      } catch (error) {
+        console.error("Masalar yüklenirken hata:", error);
+      }
+    };
+
+    fetchTables();
       
     const savedIp = localStorage.getItem("restaurant_ip");
     if(savedIp) setIpAddress(savedIp);

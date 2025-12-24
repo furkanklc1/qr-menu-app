@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import toast, { Toaster } from "react-hot-toast";
+import { api } from "../lib/api";
 
 export default function EditProductModal({ product, onClose }: { product: any, onClose: () => void }) {
   const router = useRouter();
@@ -10,9 +12,10 @@ export default function EditProductModal({ product, onClose }: { product: any, o
   // Form Verileri
   const [formData, setFormData] = useState({
     name: product.name,
-    description: product.description,
+    description: product.description || '', // null/undefined ise boş string
     price: product.price,
     categoryId: product.categoryId,
+    trackStock: product.trackStock || false,
   });
   
   // Yeni dosya için state
@@ -26,9 +29,11 @@ export default function EditProductModal({ product, onClose }: { product: any, o
       // 1. Kargo Paketini Hazırla (FormData)
       const data = new FormData();
       data.append("name", formData.name);
-      data.append("description", formData.description);
+      // Açıklama boşsa boş string gönder (backend @IsOptional ile kabul eder)
+      data.append("description", formData.description || '');
       data.append("price", formData.price.toString());
       data.append("categoryId", formData.categoryId.toString());
+      data.append("trackStock", formData.trackStock.toString());
       
       // Eğer yeni resim seçildiyse pakete koy
       if (file) {
@@ -36,28 +41,30 @@ export default function EditProductModal({ product, onClose }: { product: any, o
       }
 
       // 2. Backend'e Gönder (PATCH)
-      const res = await fetch(`http://localhost:3000/products/${product.id}`, {
-        method: "PATCH",
-        body: data, // JSON değil, FormData gönderiyoruz!
-      });
+      const res = await api.patchFormData(`/products/${product.id}`, data);
 
       if (res.ok) {
-        alert("✅ Ürün Güncellendi!");
+        toast.success("✅ Ürün Güncellendi!", { duration: 10000 });
         router.refresh();
-        onClose(); // Pencereyi kapat
+        setTimeout(() => {
+          onClose(); // Pencereyi kapat
+        }, 2000);
       } else {
-        alert("❌ Güncelleme hatası.");
+        const errorData = await res.json().catch(() => ({}));
+        toast.error(errorData.message || "❌ Güncelleme hatası.", { duration: 10000 });
       }
     } catch (error) {
-      alert("Sunucu hatası.");
+      toast.error("Sunucu hatası.", { duration: 10000 });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 w-full max-w-md shadow-2xl relative">
+    <>
+      <Toaster position="top-center" toastOptions={{ duration: 10000 }} />
+      <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+        <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 w-full max-w-md shadow-2xl relative">
         
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white font-bold text-xl">
           &times;
@@ -72,8 +79,15 @@ export default function EditProductModal({ product, onClose }: { product: any, o
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Açıklama</label>
-            <input type="text" value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white outline-none focus:ring-2 focus:ring-orange-500" required />
+            <label className="block text-sm text-gray-400 mb-1">
+              Açıklama <span className="text-xs text-gray-500 font-normal">(İsteğe Bağlı)</span>
+            </label>
+            <input 
+              type="text" 
+              value={formData.description || ''} 
+              onChange={(e) => setFormData({...formData, description: e.target.value})} 
+              className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white outline-none focus:ring-2 focus:ring-orange-500" 
+            />
           </div>
 
           <div className="flex gap-4">
@@ -85,6 +99,20 @@ export default function EditProductModal({ product, onClose }: { product: any, o
                 <label className="block text-sm text-gray-400 mb-1">Kat ID</label>
                 <input type="number" value={formData.categoryId} onChange={(e) => setFormData({...formData, categoryId: Number(e.target.value)})} className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white outline-none focus:ring-2 focus:ring-orange-500" required />
             </div>
+          </div>
+
+          {/* Stok Takibi */}
+          <div className="flex items-center gap-3 p-3 bg-gray-700 rounded-lg border border-gray-600">
+            <input 
+              type="checkbox" 
+              id="trackStock"
+              checked={formData.trackStock}
+              onChange={(e) => setFormData({...formData, trackStock: e.target.checked})}
+              className="w-5 h-5 text-orange-600 bg-gray-600 border-gray-500 rounded focus:ring-orange-500 cursor-pointer"
+            />
+            <label htmlFor="trackStock" className="text-sm text-gray-300 cursor-pointer">
+              📦 Stok takibi yap
+            </label>
           </div>
 
           {/* Dosya Yükleme Alanı */}
@@ -104,5 +132,6 @@ export default function EditProductModal({ product, onClose }: { product: any, o
         </form>
       </div>
     </div>
+    </>
   );
 }

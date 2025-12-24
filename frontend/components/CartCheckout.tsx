@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useCartStore } from "../store/useCartStore";
+import { api } from "../lib/api";
 
 export default function CartCheckout() {
   const { 
@@ -62,11 +63,7 @@ export default function CartCheckout() {
           })),
         };
 
-        const response = await fetch("http://localhost:3000/orders", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(orderData),
-        });
+        const response = await api.post("/orders", orderData);
 
         if (response.ok) {
           const newOrder = await response.json();

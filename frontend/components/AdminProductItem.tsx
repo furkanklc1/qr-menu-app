@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import EditProductModal from "./EditProductModal"; // <--- Yeni Modalı Çağırdık
+import EditProductModal from "./EditProductModal";
+import { api } from "../lib/api";
 
 export default function AdminProductItem({ product }: { product: any }) {
   const router = useRouter();
@@ -12,7 +13,8 @@ export default function AdminProductItem({ product }: { product: any }) {
     if (!confirm("Bu ürünü silmek istediğine emin misin?")) return;
 
     try {
-      await fetch(`http://localhost:3000/products/${product.id}`, { method: "DELETE" });
+      const res = await api.delete(`/products/${product.id}`);
+      if (!res.ok) throw new Error("Silme başarısız");
       router.refresh();
     } catch (error) {
       alert("Silinirken hata oluştu.");

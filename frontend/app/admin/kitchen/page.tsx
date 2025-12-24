@@ -7,6 +7,7 @@ import Cookies from "js-cookie";
 import AdminOrderCard from "../../../components/AdminOrderCard"; 
 import Link from "next/link";
 import toast, { Toaster } from 'react-hot-toast';
+import { api } from "../../../lib/api";
 
 interface Order {
   id: number;
@@ -44,14 +45,11 @@ export default function AdminPage() {
 
   useEffect(() => {
     // 1. REST API ile mevcut siparişleri çek
-    fetch("http://localhost:3000/orders")
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
-        return res.json();
-      })
-      .then((data) => {
+    const fetchOrders = async () => {
+      try {
+        const res = await api.get("/orders");
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data = await res.json();
         // Verinin array olduğundan emin ol
         if (Array.isArray(data)) {
           const activeOrders = data.filter((o: Order) => o.status !== "SERVED");
@@ -60,11 +58,13 @@ export default function AdminPage() {
           console.error("Backend'den array gelmedi:", data);
           setOrders([]);
         }
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error("Siparişler yüklenirken hata:", error);
         setOrders([]);
-      });
+      }
+    };
+    
+    fetchOrders();
 
     // 2. Socket Bağlantısı
     const socket = io("http://localhost:3000");
