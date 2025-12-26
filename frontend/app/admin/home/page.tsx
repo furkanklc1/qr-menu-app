@@ -24,7 +24,7 @@ export default function AdminHub() {
       <div className="max-w-4xl w-full">
         <div className="flex justify-between items-center mb-10 border-b border-gray-700 pb-4">
             <div>
-                <h1 className="text-4xl font-bold text-white">🚀 Yönetim Merkezi</h1>
+                <h1 className="text-4xl font-bold text-white">🚀 Admin Paneli</h1>
                 <p className="text-gray-400 mt-2">Yönetim merkezine hoş geldiniz. Lütfen yapmak istediğiniz işlemi seçin.</p>
             </div>
             <button 
@@ -82,13 +82,13 @@ export default function AdminHub() {
                 </div>
             </Link>
 
-            {/* QR Kod Merkezi */}
-            <Link href="/admin/qr-codes" className="group">
-                <div className="bg-gray-800 hover:bg-gray-750 border-2 border-gray-700 hover:border-purple-500 p-8 rounded-2xl transition-all duration-300 transform hover:-translate-y-1 shadow-xl flex items-center gap-6 cursor-pointer">
-                    <div className="text-5xl bg-gray-700 p-4 rounded-full group-hover:bg-purple-600 transition-colors">🖨️</div>
+            {/* Müşteri Yorumları */}
+            <Link href="/admin/reviews" className="group">
+                <div className="bg-gray-800 hover:bg-gray-750 border-2 border-gray-700 hover:border-yellow-500 p-8 rounded-2xl transition-all duration-300 transform hover:-translate-y-1 shadow-xl flex items-center gap-6 cursor-pointer">
+                    <div className="text-5xl bg-gray-700 p-4 rounded-full group-hover:bg-yellow-500 transition-colors">⭐</div>
                     <div>
-                        <h2 className="text-2xl font-bold text-white mb-1 group-hover:text-purple-400">QR Kod Merkezi</h2>
-                        <p className="text-gray-400 text-sm">Masa etiketlerini yazdır.</p>
+                        <h2 className="text-2xl font-bold text-white mb-1 group-hover:text-yellow-300">Müşteri Yorumları</h2>
+                        <p className="text-gray-400 text-sm">Değerlendirmeleri ve geri bildirimleri görüntüle.</p>
                     </div>
                 </div>
             </Link>
@@ -100,6 +100,17 @@ export default function AdminHub() {
                     <div>
                         <h2 className="text-2xl font-bold text-white mb-1 group-hover:text-red-400">Stok Yönetimi</h2>
                         <p className="text-gray-400 text-sm">Ürün stoklarını takip et ve yönet.</p>
+                    </div>
+                </div>
+            </Link>
+
+            {/* QR Kod Merkezi */}
+            <Link href="/admin/qr-codes" className="group">
+                <div className="bg-gray-800 hover:bg-gray-750 border-2 border-gray-700 hover:border-purple-500 p-8 rounded-2xl transition-all duration-300 transform hover:-translate-y-1 shadow-xl flex items-center gap-6 cursor-pointer">
+                    <div className="text-5xl bg-gray-700 p-4 rounded-full group-hover:bg-purple-600 transition-colors">🖨️</div>
+                    <div>
+                        <h2 className="text-2xl font-bold text-white mb-1 group-hover:text-purple-400">QR Kod Merkezi</h2>
+                        <p className="text-gray-400 text-sm">Masa etiketlerini yazdır.</p>
                     </div>
                 </div>
             </Link>

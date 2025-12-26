@@ -13,6 +13,7 @@ import { TablesModule } from './tables/tables.module';
 import { AiModule } from './ai/ai.module';
 import { WaitersModule } from './waiters/waiters.module';
 import { AuthModule } from './auth/auth.module';
+import { ReviewsModule } from './reviews/reviews.module';
 
 import { PrismaService } from './prisma.service';
 import { EventsGateway } from './events/events.gateway';
@@ -37,6 +38,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
     TablesModule,
     AiModule,
     WaitersModule,
+    ReviewsModule,
   ],
   controllers: [],
   providers: [

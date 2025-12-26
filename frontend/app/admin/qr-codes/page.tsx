@@ -70,7 +70,7 @@ export default function QRCodesPage() {
             <h1 className="text-3xl font-bold text-purple-400">🖨️ QR Kod Merkezi</h1>
             <div className="flex gap-3 items-center">
               <Link href="/admin/home" className="flex items-center gap-2 bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-md border border-gray-500">
-                <span>🏠</span> Ana Menüye Dön
+                <span>🏠</span> Ana Menü
               </Link>
               <button
                 onClick={handleLogout}
@@ -102,25 +102,54 @@ export default function QRCodesPage() {
       </div>
 
       {/* --- YAZDIRILACAK ALAN --- */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-8 print:grid-cols-2 print:gap-4">
-        {tables.map((table) => (
-          <div key={table.id} className="bg-white p-6 rounded-xl shadow-lg border-2 border-gray-200 flex flex-col items-center justify-center text-center print:shadow-none print:border-4 print:border-black">
-            
-            <h2 className="text-2xl font-bold mb-2 text-gray-800">{table.name}</h2>
-            <p className="text-sm text-gray-500 mb-4 uppercase tracking-widest">Menüyü Görmek İçin Okutun</p>
-            
-            <div className="bg-white p-2">
-                <QRCode 
-                    value={`http://${ipAddress}:3001/?masa=${table.id}`} 
-                    size={150}
-                />
-            </div>
+      <div className="space-y-12">
+        {/* Masa QR Kodları */}
+        <div>
+          <h2 className="text-2xl font-bold text-white mb-6 print:text-black">📋 Masa QR Kodları</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-8 print:grid-cols-2 print:gap-4">
+            {tables.map((table) => (
+              <div key={table.id} className="bg-white p-6 rounded-xl shadow-lg border-2 border-gray-200 flex flex-col items-center justify-center text-center print:shadow-none print:border-4 print:border-black">
+                
+                <h2 className="text-2xl font-bold mb-2 text-gray-800">{table.name}</h2>
+                <p className="text-sm text-gray-500 mb-4 uppercase tracking-widest">Menüyü Görmek İçin Okutun</p>
+                
+                <div className="bg-white p-2">
+                    <QRCode 
+                        value={`http://${ipAddress}:3001/?masa=${table.id}`} 
+                        size={150}
+                    />
+                </div>
 
-            <p className="mt-4 text-xs text-gray-400 font-mono">
-                Masa No: {table.id}
-            </p>
+                <p className="mt-4 text-xs text-gray-400 font-mono">
+                    Masa No: {table.id}
+                </p>
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
+
+        {/* Değerlendirme QR Kodu */}
+        <div className="print:break-inside-avoid">
+          <h2 className="text-2xl font-bold text-white mb-6 print:text-black">⭐ Müşteri Değerlendirme QR Kodu</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 print:grid-cols-1">
+            <div className="bg-gradient-to-br from-orange-50 to-red-50 p-6 rounded-xl shadow-lg border-2 border-orange-200 flex flex-col items-center justify-center text-center print:shadow-none print:border-4 print:border-black">
+              
+              <h2 className="text-2xl font-bold mb-2 text-gray-800">⭐ Değerlendirme</h2>
+              <p className="text-sm text-gray-600 mb-4 uppercase tracking-widest">Memnuniyetinizi Ölçmek İçin Okutun</p>
+              
+              <div className="bg-white p-2 rounded-lg">
+                  <QRCode 
+                      value={`http://${ipAddress}:3001/review`} 
+                      size={200}
+                  />
+              </div>
+
+              <p className="mt-4 text-xs text-gray-500 font-mono">
+                  Yemek & Garson Değerlendirmesi
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Logout Modal */}

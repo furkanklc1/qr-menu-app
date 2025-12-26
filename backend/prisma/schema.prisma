@@ -17,6 +17,7 @@ model Table {
   qrCode    String   @unique
   isActive  Boolean  @default(true)
   orders    Order[]
+  reviews   Review[]
 }
 
 // Kategoriler
@@ -131,4 +132,17 @@ enum OrderPriority {
   NORMAL
   HIGH
   VIP
+}
+
+// Müşteri Değerlendirmeleri
+model Review {
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now())
+  
+  foodRating  Int      // 1-5 yıldız (yemek için)
+  waiterRating Int     // 1-5 yıldız (garson için)
+  comment     String?  // İsteğe bağlı yorum
+  
+  tableId     Int?
+  table       Table?   @relation(fields: [tableId], references: [id])
 }

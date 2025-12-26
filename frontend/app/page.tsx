@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Toaster } from "react-hot-toast";
 import ProductCard from "../components/ProductCard";
 import CartCheckout from "../components/CartCheckout";
@@ -27,6 +28,12 @@ interface Product {
   image?: string;
 }
 
+interface Table {
+  id: number;
+  name: string;
+  isActive: boolean;
+}
+
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -35,16 +42,65 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState(""); 
   const [loading, setLoading] = useState(true);
   const [connectionError, setConnectionError] = useState(false);
+  const [tableError, setTableError] = useState<string | null>(null);
   
   // --- YENİ STATE: Popüler ürünlerin açık/kapalı durumu ---
   // Başlangıçta kapalı geliyor, tıklayınca açılıyor
   const [showPopular, setShowPopular] = useState(false); 
 
-  const { orderId, setOrderId } = useCartStore(); 
+  const { orderId, setOrderId } = useCartStore();
+  const searchParams = useSearchParams(); 
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // 1. Masa kontrolü yap (eğer masa parametresi varsa)
+        const tableIdParam = searchParams.get("masa");
+        if (tableIdParam) {
+          const tableId = parseInt(tableIdParam);
+          if (!isNaN(tableId)) {
+            try {
+              const tablesRes = await fetch(`${API_BASE_URL}/tables`, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' },
+              });
+              
+              if (tablesRes.ok) {
+                const tables: Table[] = await tablesRes.json();
+                const table = tables.find(t => t.id === tableId);
+                
+                // Sadece masa gerçekten bulunamazsa veya aktif değilse hata göster
+                if (!table) {
+                  setTableError(`Masa ${tableId} bulunamadı. Lütfen geçerli bir masa numarası kullanın.`);
+                  setLoading(false);
+                  return;
+                }
+                
+                if (!table.isActive) {
+                  setTableError(`Masa ${tableId} şu anda aktif değil.`);
+                  setLoading(false);
+                  return;
+                }
+                
+                // Masa geçerli, menüyü yüklemeye devam et
+              } else {
+                // Masa kontrolü başarısız ama network hatası olabilir, menüyü yüklemeye devam et
+                console.warn("Masa bilgileri alınamadı, menü yine de yükleniyor");
+              }
+            } catch (tableError) {
+              // Masa kontrolü başarısız ama network hatası olabilir, menüyü yüklemeye devam et
+              console.warn("Masa kontrolü yapılamadı, menü yine de yükleniyor:", tableError);
+            }
+          } else {
+            // Geçersiz masa ID formatı
+            setTableError(`Geçersiz masa numarası. Lütfen geçerli bir masa numarası kullanın.`);
+            setLoading(false);
+            return;
+          }
+        }
+        // Masa parametresi yoksa da menüyü aç (opsiyonel olabilir)
+
+        // 2. Menü verilerini çek
         const [prodRes, catRes] = await Promise.all([
           fetch(`${API_BASE_URL}/products`, {
             method: 'GET',
@@ -98,7 +154,7 @@ export default function Home() {
     };
 
     fetchData();
-  }, []);
+  }, [searchParams]);
 
   const filteredProducts = Array.isArray(products) ? products.filter((p) => {
     if (!p || !p.name) return false;
@@ -112,6 +168,19 @@ export default function Home() {
   }) : [];
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-orange-600 font-bold animate-pulse">Menü Yükleniyor...</div>;
+
+  if (tableError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <div className="bg-white rounded-2xl shadow-xl border border-red-200 p-8 max-w-md w-full text-center">
+          <div className="text-6xl mb-4">🚫</div>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">Geçersiz Masa</h1>
+          <p className="text-gray-600 mb-6">{tableError}</p>
+          <p className="text-sm text-gray-500 mb-4">Lütfen QR kodu tekrar okutun veya geçerli bir masa linki kullanın.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (connectionError) {
     return (

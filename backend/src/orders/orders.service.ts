@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { PrismaService } from '../prisma.service';
 import { EventsGateway } from '../events/events.gateway';
@@ -11,13 +11,26 @@ export class OrdersService {
   ) {}
 
   async create(createOrderDto: CreateOrderDto) {
-    // 1. Toplam tutarı hesapla
+    // 1. Masa var mı ve aktif mi kontrol et
+    const table = await this.prisma.table.findUnique({
+      where: { id: createOrderDto.tableId },
+    });
+
+    if (!table) {
+      throw new NotFoundException(`Masa ${createOrderDto.tableId} bulunamadı.`);
+    }
+
+    if (!table.isActive) {
+      throw new BadRequestException(`Masa ${createOrderDto.tableId} şu anda aktif değil.`);
+    }
+
+    // 2. Toplam tutarı hesapla
     const totalAmount = createOrderDto.items.reduce(
       (sum, item) => sum + item.price * item.quantity,
       0,
     );
 
-    // 2. Transaction Başlat: Hem siparişi oluştur hem stoğu düş
+    // 3. Transaction Başlat: Hem siparişi oluştur hem stoğu düş
     // Eğer stok düşerken hata olursa (örn: stok yetersizse), sipariş de oluşmaz.
     const newOrder = await this.prisma.$transaction(async (tx) => {
       
@@ -51,7 +64,7 @@ export class OrdersService {
       return order;
     });
 
-    // 3. Socket bildirimi gönder
+    // 4. Socket bildirimi gönder
     this.eventsGateway.server.emit('new_order', newOrder);
     return newOrder;
   }

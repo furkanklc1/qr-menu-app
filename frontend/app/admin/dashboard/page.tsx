@@ -199,7 +199,7 @@ export default function DashboardPage() {
         {/* SOL: Satış Trendi */}
         <div className="lg:col-span-2 bg-gray-800 p-6 rounded-2xl border border-gray-700 shadow-lg flex flex-col h-[400px]">
           <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-            📈 Satış Trendi 
+            📈 Satış Analizi 
             <span className="text-xs bg-gray-700 px-2 py-1 rounded text-gray-300 font-normal">
               ({range === 'daily' ? 'Saatlik' : range === 'weekly' ? 'Günlük' : '30 Günlük'})
             </span>
