@@ -43,7 +43,14 @@ export default function WaiterPage() {
   const [sortBy, setSortBy] = useState<SortOption>('oldest');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const assigningWaiterRef = useRef<Set<number>>(new Set());
+  const readyOrdersRef = useRef<Order[]>(readyOrders);
+
+  // readyOrders her değiştiğinde bu referansı güncelle
+  useEffect(() => {
+    readyOrdersRef.current = readyOrders;
+  }, [readyOrders]);
   const router = useRouter();
+  
   // Ses çalma fonksiyonu (sabit, ayar yok)
   const playSound = () => {
     try {
@@ -142,29 +149,44 @@ export default function WaiterPage() {
     // Mutfaktan bir sipariş READY (Hazır) durumuna güncellendiğinde
     socket.on("order_updated", (updatedOrder: Order) => {
       if (updatedOrder.status === "READY") {
+        // 1. ADIM: State'in en güncel halini Ref üzerinden alıyoruz (Render döngüsüne girmemek için)
+        const currentOrders = readyOrdersRef.current;
+        const existingOrder = currentOrders.find(o => o.id === updatedOrder.id);
+        
+        // Bu sipariş listede yoksa "yeni" demektir
+        const isNewOrder = !existingOrder;
+        
+        // Garson atama işlemi mi yapılıyor? (Ses çalmaması için kontrol)
+        const isAssigning = assigningWaiterRef.current.has(updatedOrder.id);
+
+        // 2. ADIM: YAN ETKİLERİ (Ses, Bildirim) BURADA YAPIYORUZ
+        // React state güncellemesinin DIŞINDA olduğu için hata vermeyecek.
+        if (isAssigning) {
+          assigningWaiterRef.current.delete(updatedOrder.id);
+        } else if (isNewOrder) {
+          toast.success(`Masa ${updatedOrder.tableId} siparişi hazır! 🍽️`);
+          playSound();
+        }
+
+        // 3. ADIM: STATE GÜNCELLEMESİ (Sadece veri değişimi, yan etki yok)
         setReadyOrders((prev) => {
-          const existingOrder = prev.find(o => o.id === updatedOrder.id);
-          const isNewOrder = !existingOrder;
-          
-          // Eğer bu sipariş şu anda garson atama işlemi yapılıyorsa ses çalma
-          if (assigningWaiterRef.current.has(updatedOrder.id)) {
-            assigningWaiterRef.current.delete(updatedOrder.id);
-            return prev.map(o => o.id === updatedOrder.id ? updatedOrder : o);
-          }
-          
-          // Yeni sipariş için bildirim göster
           if (isNewOrder) {
-            toast.success(`Masa ${updatedOrder.tableId} siparişi hazır! 🍽️`);
-            playSound();
+            // Çifte eklemeyi önlemek için son bir kontrol
+            if (prev.find(o => o.id === updatedOrder.id)) {
+               return prev.map(o => o.id === updatedOrder.id ? updatedOrder : o);
+            }
+            // Yeni siparişi en başa ekle
             return [updatedOrder, ...prev];
           }
-          
+          // Mevcut siparişi güncelle
           return prev.map(o => o.id === updatedOrder.id ? updatedOrder : o);
         });
+
       } else if (updatedOrder.status === "SERVED") {
+        // Servis edildiyse listeden çıkar
         setReadyOrders((prev) => prev.filter((o) => o.id !== updatedOrder.id));
       } else {
-        // Garson ataması gibi diğer güncellemeler için sadece state'i güncelle (ses çalma)
+        // Diğer durumlar (örn: garson atandı) için güncelleme yap
         setReadyOrders((prev) => {
           if (prev.find(o => o.id === updatedOrder.id)) {
             return prev.map(o => o.id === updatedOrder.id ? updatedOrder : o);
